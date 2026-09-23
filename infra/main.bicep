@@ -15,6 +15,17 @@ param mysqlAdminUser string = 'corisadmin'
 @secure()
 param mysqlAdminPassword string
 
+@description('Segredo usado para assinar os tokens JWT (mínimo 32 caracteres).')
+@secure()
+@minLength(32)
+param jwtSecret string
+
+param adminEmail string = 'admin@seguroviagem.com'
+
+@description('Senha do primeiro usuário da aplicação, criado no primeiro start da API.')
+@secure()
+param adminSenha string
+
 @description('URL do frontend liberada no CORS da API. Deixe vazio para usar a URL gerada do Static Web App.')
 param corsOrigin string = ''
 
@@ -28,16 +39,6 @@ resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2022-10-01' = {
   properties: {
     sku: { name: 'PerGB2018' }
     retentionInDays: 30
-  }
-}
-
-resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
-  name: 'appi-${nome}'
-  location: location
-  kind: 'web'
-  properties: {
-    Application_Type: 'web'
-    WorkspaceResourceId: logAnalytics.id
   }
 }
 
@@ -95,6 +96,16 @@ resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
     name: 'DbPassword'
     properties: { value: mysqlAdminPassword }
   }
+
+  resource jwt 'secrets' = {
+    name: 'JwtSecret'
+    properties: { value: jwtSecret }
+  }
+
+  resource senhaAdmin 'secrets' = {
+    name: 'AdminSenha'
+    properties: { value: adminSenha }
+  }
 }
 
 resource staticWebApp 'Microsoft.Web/staticSites@2023-01-01' = {
@@ -143,9 +154,28 @@ resource api 'Microsoft.Web/sites@2023-01-01' = {
         { name: 'DB_PASSWORD', value: '@Microsoft.KeyVault(SecretUri=${keyVault::dbPassword.properties.secretUri})' }
         { name: 'MYSQL_ATTR_SSL_CA', value: '/etc/ssl/certs/ca-certificates.crt' }
         { name: 'CORS_ALLOWED_ORIGIN', value: empty(corsOrigin) ? 'https://${staticWebApp.properties.defaultHostname}' : corsOrigin }
-        { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING', value: appInsights.properties.ConnectionString }
+        { name: 'JWT_SECRET', value: '@Microsoft.KeyVault(SecretUri=${keyVault::jwt.properties.secretUri})' }
+        { name: 'ADMIN_EMAIL', value: adminEmail }
+        { name: 'ADMIN_SENHA', value: '@Microsoft.KeyVault(SecretUri=${keyVault::senhaAdmin.properties.secretUri})' }
       ]
     }
+  }
+}
+
+resource apiDiagnostico 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
+  name: 'logs-para-log-analytics'
+  scope: api
+  properties: {
+    workspaceId: logAnalytics.id
+    logs: [
+      { category: 'AppServiceHTTPLogs', enabled: true }
+      { category: 'AppServiceConsoleLogs', enabled: true }
+      { category: 'AppServiceAppLogs', enabled: true }
+      { category: 'AppServicePlatformLogs', enabled: true }
+    ]
+    metrics: [
+      { category: 'AllMetrics', enabled: true }
+    ]
   }
 }
 

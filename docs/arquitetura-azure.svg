@@ -43,15 +43,15 @@
   <rect class="caixa" x="330" y="320" width="280" height="110" rx="10"/>
   <rect class="faixa" x="330" y="320" width="6" height="110" rx="3"/>
   <text class="titulo" x="350" y="352">Azure App Service (Linux)</text>
-  <text class="sub" x="350" y="374">API REST · PHP 8.3 + nginx</text>
+  <text class="sub" x="350" y="374">API REST · PHP 8.3 · autenticação JWT</text>
   <text class="sub" x="350" y="393">Managed Identity · health check</text>
   <text class="sub" x="350" y="412">Escala horizontal (scale out)</text>
 
   <rect class="caixa" x="330" y="530" width="280" height="100" rx="10"/>
   <rect class="faixa" x="330" y="530" width="6" height="100" rx="3"/>
   <text class="titulo" x="350" y="562">Azure Database for MySQL</text>
-  <text class="sub" x="350" y="584">Flexible Server · MySQL 8.0</text>
-  <text class="sub" x="350" y="603">Backup automático 7 dias · TLS obrigatório</text>
+  <text class="sub" x="350" y="584">Flexible Server · backup 7 dias · TLS</text>
+  <text class="sub" x="350" y="603">segurados 1:N apólices 1:N endossos</text>
 
   <rect class="caixa" x="720" y="140" width="260" height="100" rx="10"/>
   <rect class="faixa" x="720" y="140" width="6" height="100" rx="3"/>
@@ -62,15 +62,15 @@
   <rect class="caixa" x="720" y="320" width="260" height="110" rx="10"/>
   <rect class="faixa" x="720" y="320" width="6" height="110" rx="3"/>
   <text class="titulo" x="740" y="352">Azure Key Vault</text>
-  <text class="sub" x="740" y="374">Segredo: senha do banco</text>
+  <text class="sub" x="740" y="374">Senha do banco e segredo do JWT</text>
   <text class="sub" x="740" y="393">RBAC: Key Vault Secrets User</text>
   <text class="sub" x="740" y="412">Key Vault Reference no App Service</text>
 
   <rect class="caixa" x="720" y="530" width="260" height="100" rx="10"/>
   <rect class="faixa" x="720" y="530" width="6" height="100" rx="3"/>
-  <text class="titulo" x="740" y="562">Application Insights</text>
-  <text class="sub" x="740" y="584">+ Log Analytics</text>
-  <text class="sub" x="740" y="603">Requisições, falhas e latência</text>
+  <text class="titulo" x="740" y="562">Azure Monitor · Log Analytics</text>
+  <text class="sub" x="740" y="584">Diagnostic Settings do App Service</text>
+  <text class="sub" x="740" y="603">Logs HTTP, erros da API e métricas</text>
 
   <rect x="1010" y="140" width="140" height="96" rx="10" fill="#ffffff" stroke="#c7d3e0"/>
   <text x="1024" y="164" font-size="12" font-weight="700" fill="#1b2533">Legenda</text>
@@ -95,7 +95,7 @@
   <text class="rotulo" x="668" y="270">token</text>
 
   <path class="linha" d="M610 410 H660 V580 H716"/>
-  <text class="rotulo" x="668" y="500">telemetria</text>
+  <text class="rotulo" x="668" y="500">logs</text>
 
   <path class="deploy" d="M210 560 H250 V400 H326"/>
   <path class="deploy" d="M250 400 V270 H400 V244"/>

@@ -1,31 +1,29 @@
 # Seguro Viagem - Gestão de Apólices
 
-Seguro Viagem é uma aplicação web para **gestão de apólices de seguro viagem**, desenvolvida como teste técnico, utilizando **PHP 8.3** (sem framework), **React 18** e **MySQL**, com desenho de solução na **Azure**. O foco foi entregar o CRUD completo com regras reais do negócio de seguros (cálculo de prêmio, endosso, exclusão lógica), arquitetura em camadas seguindo **SOLID** e **Clean Code**, autenticação e testes automatizados.
+Seguro Viagem é uma aplicação web para **gestão de apólices de seguro viagem**, desenvolvida como teste técnico, utilizando **Laravel 12**, **React 18** e **MySQL**, com desenho de solução na **Azure**. O foco foi entregar o CRUD completo com regras reais do negócio de seguros (cálculo do prêmio, vigência, exclusão lógica), código organizado seguindo **SOLID** e **Clean Code** e testes automatizados.
 
 ---
 
 ## Requisitos atendidos
 
 - Leitura, cadastro, edição e exclusão de apólices
-- Conceitos de **SOLID** e **Clean Code** aplicados em camadas (Domain, Application, Infrastructure e Http)
+- Conceitos de **SOLID** e **Clean Code** (Controller, Form Request, Service e Calculadora separados)
 - Frontend em **React 18**
-- Banco de dados relacional (**MySQL**) com relacionamentos **1:N**
-- Desenho de solução com componentes da **Azure** + infraestrutura como código (Bicep)
-- Autenticação com **JWT**
-- Testes automatizados no backend e no frontend, rodando no CI (GitHub Actions)
+- Banco de dados relacional (**MySQL**) com relacionamento **1:N**
+- Desenho de solução com componentes da **Azure**
+- Testes automatizados (PHPUnit)
 - Docker para desenvolvimento local
 
 ---
 
 ## Tecnologias
 
-- **Backend:** PHP 8.3 sem framework, Composer (PSR-4), firebase/php-jwt
+- **Backend:** Laravel 12 (PHP 8.3)
 - **Frontend:** React 18 + Vite + React Router
 - **Banco:** MySQL 8 (SQLite para rodar local sem instalar banco)
-- **Testes:** PHPUnit (backend) e Vitest + Testing Library (frontend)
+- **Testes:** PHPUnit
 - **Docker:** Apache + PHP, MySQL e Nginx servindo o React
-- **Azure:** App Service, Static Web Apps, Database for MySQL, Key Vault, Log Analytics
-- **CI/CD:** GitHub Actions
+- **Azure:** App Service, Static Web Apps, Database for MySQL e Key Vault
 
 ---
 
@@ -34,22 +32,17 @@ Seguro Viagem é uma aplicação web para **gestão de apólices de seguro viage
 ![Arquitetura na Azure](docs/arquitetura-azure.svg)
 
 - **Static Web Apps** hospeda o React (estático, em CDN, com HTTPS)
-- **App Service (Linux)** roda a API em PHP
-- **Azure Database for MySQL** guarda segurados, apólices e endossos
-- **Key Vault** guarda a senha do banco e o segredo do JWT. A API acessa com **Managed Identity**, então nenhuma senha fica no código ou no GitHub
-- **Log Analytics** recebe os logs HTTP, erros da API e métricas do App Service
-- **GitHub Actions** roda os testes a cada push e publica front e API
-
-Toda a infraestrutura está em [`infra/main.bicep`](infra/main.bicep).
+- **App Service (Linux)** roda a API Laravel
+- **Azure Database for MySQL** guarda segurados e apólices
+- **Key Vault** guarda a senha do banco e a `APP_KEY`, lidas pelo App Service com **Managed Identity**
+- **GitHub Actions** faz o deploy a cada push (workflow gerado pelo Deployment Center do Azure)
 
 ---
 
 ## Modelagem do Domínio
 
 - **Segurado** → possui muitas **Apólices** (1:N). É identificado pelo CPF e reaproveitado entre apólices
-- **Apólice** → pertence a um **Segurado** e possui muitos **Endossos** (1:N)
-- **Endosso** → registro de cada alteração feita em uma apólice já emitida: o que mudou, prêmio anterior, prêmio novo e quem alterou
-- **Usuário** → operador que acessa o sistema
+- **Apólice** → pertence a um **Segurado**, tem destino, plano, vigência, prêmio e status (ativa ou cancelada)
 
 ---
 
@@ -58,46 +51,44 @@ Toda a infraestrutura está em [`infra/main.bicep`](infra/main.bicep).
 - **Prêmio** = diária do plano × dias de viagem × % do destino × % da idade do segurado
   - Planos: Essencial (R$ 12,90/dia), Plus (R$ 24,90/dia), Premium (R$ 39,90/dia)
   - Destino: Nacional 50%, América do Sul 100%, Europa 130%, América do Norte 140%, Ásia/África/Oceania 150%
-  - Idade: até 59 anos 100%, 60 a 74 anos 160%, 75+ anos 250%
-- Valores em dinheiro são tratados sempre em **centavos (inteiro)**, nunca em `float`, para não ter erro de arredondamento
+  - Idade no início da viagem: até 59 anos 100%, 60 a 74 anos 160%, 75+ anos 250%
+- Valores em dinheiro são guardados em **centavos (inteiro)**, nunca em `float`, para não ter erro de arredondamento
 - A vigência não pode começar antes de hoje e tem no máximo 365 dias
-- O CPF é validado pelos dígitos verificadores e não pode ser trocado em uma apólice já emitida
-- Apólice emitida não é editada livremente: toda alteração gera um **endosso** com o histórico
+- CPF validado pelos dígitos verificadores
 - Apólice cancelada só pode ser alterada para ser reativada
-- A exclusão é **lógica**: a apólice some do sistema, mas o registro fica no banco para auditoria
+- A exclusão é **lógica** (`SoftDeletes`): a apólice some do sistema, mas o registro fica no banco
 
 ---
 
 ## Fluxo
 
-1. Operador faz **login** (JWT, válido por 8 horas).
-2. Cadastra uma **Apólice**.
-   - O prêmio é calculado em tempo real enquanto o formulário é preenchido.
+1. Operador cadastra uma **Apólice**.
+   - O prêmio é calculado em tempo real enquanto o formulário é preenchido (endpoint de cotação).
    - Se o CPF já existir, o **Segurado** é reaproveitado.
-3. Consulta a lista com busca (nome, CPF, e-mail ou número), filtro por status e paginação.
-4. Edita uma apólice.
-   - Cada alteração gera um **Endosso** com o que mudou e a diferença de prêmio.
-5. Cancela ou reativa pelo status.
-6. Exclui a apólice (exclusão lógica).
+2. Consulta a lista com busca (nome, CPF, e-mail ou número), filtro por status e paginação.
+3. Edita a apólice e o prêmio é recalculado.
+4. Cancela ou reativa pelo status.
+5. Exclui a apólice (exclusão lógica).
 
 ---
 
-## Arquitetura do backend
+## Organização do backend
 
 ```
-Http            → Router, Controllers, Resources, Kernel (auth, erros, CORS)
-Application     → ApoliceService, AuthService, ApoliceValidator, CalculadoraPremio
-Domain          → Apolice, Endosso, Segurado, Usuario, Cpf, Dinheiro, Vigencia + interfaces dos repositórios
-Infrastructure  → Repositórios PDO, transação, JWT, relógio, conexão com o banco
+routes/api.php                  rotas da API
+app/Http/Requests               validação (SalvarApoliceRequest, CotacaoRequest) e regra de CPF
+app/Http/Controllers/Api        recebe a requisição e chama o service
+app/Services/ApoliceService     regras de negócio (criar, atualizar, excluir, cotar, resumo)
+app/Services/Premio             CalculadoraPremio (interface) e CalculadoraPremioViagem
+app/Models                      Segurado e Apolice (Eloquent)
+app/Enums                       Plano, Destino e StatusApolice
+app/Http/Resources              formato do JSON de resposta
 ```
 
-A dependência sempre aponta para o **Domain**, que não conhece banco, HTTP nem framework.
-
-- **S** - cada classe tem uma responsabilidade: o validador só valida formato, a calculadora só calcula, o repositório só persiste
-- **O** - novo plano ou destino é um novo `case` no enum; nova regra de preço é outra implementação de `CalculadoraPremio`
-- **L** - os repositórios PDO podem ser trocados por qualquer outra implementação da interface (nos testes uso SQLite em memória)
-- **I** - interfaces pequenas: `CalculadoraPremio`, `Relogio`, `Transacao`, `EmissorToken`
-- **D** - os serviços recebem interfaces no construtor; quem monta as implementações é o `Container`
+- **S** - cada classe com uma responsabilidade: o Form Request valida, o Controller só trata HTTP, o Service tem a regra e a Calculadora só calcula
+- **O** - plano ou destino novo é um novo `case` no enum; outra regra de preço é outra classe que implementa `CalculadoraPremio`
+- **L / D** - o `ApoliceService` recebe a interface `CalculadoraPremio` por injeção de dependência; a implementação é definida no `AppServiceProvider`
+- **I** - a interface da calculadora tem um método só
 
 ---
 
@@ -105,15 +96,10 @@ A dependência sempre aponta para o **Domain**, que não conhece banco, HTTP nem
 
 ```bash
 cd backend
-vendor/bin/phpunit
+php artisan test
 ```
 
-```bash
-cd frontend
-npm test
-```
-
-> Todos os testes estão passando (58 no backend e 13 no frontend)
+> Todos os testes estão passando
 
 ---
 
@@ -129,21 +115,20 @@ A aplicação roda no Docker em **http://localhost:3000**
 docker compose up -d --build
 ```
 
-Na subida a API cria as tabelas e o usuário administrador sozinha.
+Na subida a API roda as migrations sozinha.
 
 ## 2) Popular com dados de exemplo (opcional)
 
 ```bash
-docker compose exec api php bin/seed.php
+docker compose exec api php artisan db:seed
 ```
 
 ## 3) Acessar
 
 - App: **http://localhost:3000**
-- API: **http://localhost:8000/api**
-- Login: **admin@seguroviagem.com** / **Admin@123**
+- API: **http://localhost:8000/api/apolices**
 
-> Se mudar a estrutura do banco, rode `docker compose down -v` antes de subir de novo para recriar o MySQL.
+> Se precisar recriar o banco do zero: `docker compose down -v` e subir de novo.
 
 ---
 
@@ -155,10 +140,9 @@ Requisitos: PHP 8.2+, Composer, Node.js 18+. Localmente a API usa SQLite, então
 cd backend
 composer install
 cp .env.example .env
-php bin/migrate.php
-php bin/criar-admin.php
-php bin/seed.php
-php -S localhost:8000 -t public
+php artisan key:generate
+php artisan migrate --seed
+php artisan serve
 ```
 
 Em outro terminal:
@@ -175,44 +159,45 @@ npm run dev
 
 ## Endpoints
 
-Todos exigem `Authorization: Bearer <token>`, menos o login e o health check.
-
-- `POST /api/auth/login` - login, retorna o token
-- `GET /api/apolices?busca=&status=&pagina=` - lista paginada
+- `GET /api/apolices?busca=&status=&page=` - lista paginada
 - `GET /api/apolices/resumo` - totais para os cards da tela inicial
 - `GET /api/apolices/{id}` - detalhe
-- `GET /api/apolices/{id}/endossos` - histórico de endossos
-- `POST /api/apolices` - emite uma apólice
-- `PUT /api/apolices/{id}` - altera e gera endosso
+- `POST /api/apolices` - cadastra
+- `PUT /api/apolices/{id}` - edita
 - `DELETE /api/apolices/{id}` - exclusão lógica
 - `POST /api/apolices/cotacao` - calcula o prêmio sem salvar
 - `GET /api/opcoes` - planos, destinos e status
 
-Erros de validação voltam com status `422` e a mensagem por campo, para o front mostrar no lugar certo.
+Erros de validação voltam com status `422` e a mensagem por campo.
 
 ---
 
 ## Deploy na Azure
 
-```bash
-az login
-az group create --name rg-coris-seguros --location brazilsouth
+Feito pelo Portal da Azure, no Resource Group `rg-coris-seguros` (Brazil South).
 
-export MYSQL_ADMIN_PASSWORD='<senha-forte>'
-export JWT_SECRET="$(openssl rand -base64 48)"
-export ADMIN_SENHA='<senha-do-admin>'
+1. **Azure Database for MySQL - Flexible Server**
+   - Criar o servidor e o banco `coris_seguros`
+   - Em *Networking*, liberar acesso para serviços do Azure
+2. **App Service** (Linux, PHP 8.3)
+   - Em *Environment variables*: `APP_KEY`, `APP_ENV=production`, `APP_DEBUG=false`, `DB_CONNECTION=mysql`, `DB_HOST`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD` e `MYSQL_ATTR_SSL_CA=/etc/ssl/certs/ca-certificates.crt`
+   - Em *Configuration > Startup Command*: `bash /home/site/wwwroot/azure/startup.sh` (aponta o nginx para a pasta `public` e roda as migrations)
+   - Em *Deployment Center*: conectar o GitHub (pasta `backend`)
+3. **Key Vault** (opcional)
+   - Guardar a senha do banco e usar referência `@Microsoft.KeyVault(...)` nas variáveis do App Service, com Managed Identity
+4. **Static Web App**
+   - Conectar o GitHub, app location `frontend`, output `dist`
+   - Variável de build `VITE_API_URL` com a URL do App Service + `/api`
 
-az deployment group create --resource-group rg-coris-seguros --parameters infra/main.bicepparam
-```
+---
 
-Depois, no GitHub (**Settings → Secrets and variables → Actions**):
+## Próximos passos
 
-- Variable `AZURE_WEBAPP_NAME` com o nome da API (saída `apiName`)
-- Variable `AZURE_API_URL` com a URL da API (saída `apiUrl`)
-- Secret `AZURE_WEBAPP_PUBLISH_PROFILE` (Portal → App Service → Download publish profile)
-- Secret `AZURE_STATIC_WEB_APPS_API_TOKEN` (Portal → Static Web App → Manage deployment token)
-
-A partir daí cada push na `main` publica a aplicação.
+- Autenticação de usuários (Laravel Sanctum)
+- Endosso: registrar o histórico de cada alteração feita em uma apólice emitida
+- Infraestrutura como código (Bicep) para criar os recursos da Azure
+- Testes no frontend
+- Pipeline de CI próprio rodando os testes antes do deploy
 
 ---
 

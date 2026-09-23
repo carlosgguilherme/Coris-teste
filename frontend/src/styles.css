@@ -359,7 +359,8 @@ legend {
   grid-column: span 2;
 }
 
-.field span {
+.field > label,
+.field > span {
   display: block;
   font-size: 0.85rem;
   font-weight: 500;
@@ -507,4 +508,120 @@ legend {
   .span-2 {
     grid-column: auto;
   }
+}
+
+.alert--info {
+  background: var(--azul-claro);
+  color: var(--azul-escuro);
+}
+
+input[readonly] {
+  background: var(--fundo);
+  color: var(--texto-suave);
+}
+
+.topbar__content {
+  justify-content: space-between;
+}
+
+.topbar__usuario {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.9rem;
+}
+
+.btn--topbar {
+  background: transparent;
+  color: var(--branco);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.btn--topbar:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.paginacao {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding-top: 1rem;
+  font-size: 0.85rem;
+}
+
+.paginacao__botoes {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.endossos {
+  margin-top: 1rem;
+}
+
+.endossos__lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 1rem;
+}
+
+.endossos__lista > li {
+  border-left: 3px solid var(--azul);
+  padding: 0.25rem 0 0.25rem 1rem;
+}
+
+.endossos__cabecalho {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  font-size: 0.9rem;
+}
+
+.endossos__lista ul {
+  margin: 0.5rem 0;
+  padding-left: 1.1rem;
+  font-size: 0.9rem;
+}
+
+.diferenca {
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.diferenca--mais {
+  color: var(--vermelho);
+}
+
+.diferenca--menos {
+  color: var(--verde);
+}
+
+.login {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+}
+
+.login__card {
+  width: min(380px, 100%);
+  display: grid;
+  gap: 1rem;
+  padding: 2rem;
+}
+
+.login__marca {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.login__marca strong,
+.login__marca span {
+  display: block;
 }

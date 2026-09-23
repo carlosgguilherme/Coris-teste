@@ -56,26 +56,32 @@ export default function ApoliceForm({ inicial, edicao = false, textoBotao, onSub
     value: form[nome],
     onChange: alterar(nome),
     'aria-invalid': Boolean(erros[nome]),
+    'aria-describedby': erros[nome] ? `${nome}-erro` : undefined,
   });
 
   return (
     <form className="form-layout" onSubmit={enviar} noValidate>
       <div className="card form-card">
         {erroGeral && <div className="alert alert--erro">{erroGeral}</div>}
+        {edicao && (
+          <div className="alert alert--info">
+            Toda alteração em uma apólice emitida gera um endosso, com o histórico do que mudou e a diferença de prêmio.
+          </div>
+        )}
 
         <fieldset>
           <legend>Dados do segurado</legend>
           <div className="grid">
-            <Campo label="Nome completo" erro={erros.seguradoNome} className="span-2">
+            <Campo label="Nome completo" campo="seguradoNome" erro={erros.seguradoNome} className="span-2">
               <input {...campo('seguradoNome')} autoComplete="name" />
             </Campo>
-            <Campo label="CPF" erro={erros.seguradoCpf}>
-              <input {...campo('seguradoCpf')} inputMode="numeric" placeholder="000.000.000-00" />
+            <Campo label="CPF" campo="seguradoCpf" erro={erros.seguradoCpf}>
+              <input {...campo('seguradoCpf')} inputMode="numeric" placeholder="000.000.000-00" readOnly={edicao} />
             </Campo>
-            <Campo label="Data de nascimento" erro={erros.seguradoNascimento}>
+            <Campo label="Data de nascimento" campo="seguradoNascimento" erro={erros.seguradoNascimento}>
               <input {...campo('seguradoNascimento')} type="date" />
             </Campo>
-            <Campo label="E-mail" erro={erros.seguradoEmail} className="span-2">
+            <Campo label="E-mail" campo="seguradoEmail" erro={erros.seguradoEmail} className="span-2">
               <input {...campo('seguradoEmail')} type="email" autoComplete="email" />
             </Campo>
           </div>
@@ -84,7 +90,7 @@ export default function ApoliceForm({ inicial, edicao = false, textoBotao, onSub
         <fieldset>
           <legend>Viagem e cobertura</legend>
           <div className="grid">
-            <Campo label="Destino" erro={erros.destino}>
+            <Campo label="Destino" campo="destino" erro={erros.destino}>
               <select {...campo('destino')}>
                 <option value="">Selecione...</option>
                 {opcoes?.destinos.map((destino) => (
@@ -92,7 +98,7 @@ export default function ApoliceForm({ inicial, edicao = false, textoBotao, onSub
                 ))}
               </select>
             </Campo>
-            <Campo label="Plano" erro={erros.plano}>
+            <Campo label="Plano" campo="plano" erro={erros.plano}>
               <select {...campo('plano')}>
                 <option value="">Selecione...</option>
                 {opcoes?.planos.map((plano) => (
@@ -102,14 +108,14 @@ export default function ApoliceForm({ inicial, edicao = false, textoBotao, onSub
                 ))}
               </select>
             </Campo>
-            <Campo label="Início da vigência" erro={erros.inicioVigencia}>
+            <Campo label="Início da vigência" campo="inicioVigencia" erro={erros.inicioVigencia}>
               <input {...campo('inicioVigencia')} type="date" />
             </Campo>
-            <Campo label="Fim da vigência" erro={erros.fimVigencia}>
+            <Campo label="Fim da vigência" campo="fimVigencia" erro={erros.fimVigencia}>
               <input {...campo('fimVigencia')} type="date" min={form.inicioVigencia || undefined} />
             </Campo>
             {edicao && (
-              <Campo label="Status" erro={erros.status}>
+              <Campo label="Status" campo="status" erro={erros.status}>
                 <select {...campo('status')}>
                   {opcoes?.status.map((status) => (
                     <option key={status.valor} value={status.valor}>{status.label}</option>
@@ -145,13 +151,17 @@ export default function ApoliceForm({ inicial, edicao = false, textoBotao, onSub
   );
 }
 
-function Campo({ label, erro, className = '', children }) {
+function Campo({ label, campo, erro, className = '', children }) {
   return (
-    <label className={`field ${className}`}>
-      <span>{label}</span>
+    <div className={`field ${className}`}>
+      <label htmlFor={campo}>{label}</label>
       {children}
-      {erro && <small className="field__erro">{erro}</small>}
-    </label>
+      {erro && (
+        <small id={`${campo}-erro`} className="field__erro">
+          {erro}
+        </small>
+      )}
+    </div>
   );
 }
 

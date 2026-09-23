@@ -9,4 +9,9 @@ export default defineConfig({
       '/api': process.env.VITE_PROXY_TARGET ?? 'http://localhost:8000',
     },
   },
+  test: {
+    environment: 'jsdom',
+    setupFiles: './src/testes/setup.js',
+    restoreMocks: true,
+  },
 });

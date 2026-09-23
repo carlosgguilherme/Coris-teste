@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { apolicesApi } from '../api/apolices';
 import ConfirmDialog from '../components/ConfirmDialog';
+import Paginacao from '../components/Paginacao';
 import StatusBadge from '../components/StatusBadge';
 import { useToast } from '../components/Toast';
 import { formatarData, formatarMoeda } from '../utils/format';
@@ -9,8 +10,9 @@ import { formatarData, formatarMoeda } from '../utils/format';
 export default function ApoliceList() {
   const navigate = useNavigate();
   const notificar = useToast();
-  const [apolices, setApolices] = useState([]);
-  const [filtros, setFiltros] = useState({ busca: '', status: '' });
+  const [resultado, setResultado] = useState({ dados: [], paginacao: null });
+  const [resumo, setResumo] = useState(null);
+  const [filtros, setFiltros] = useState({ busca: '', status: '', pagina: 1 });
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState(null);
   const [paraExcluir, setParaExcluir] = useState(null);
@@ -24,7 +26,7 @@ export default function ApoliceList() {
       apolicesApi
         .listar(filtros, controller.signal)
         .then((dados) => {
-          setApolices(dados);
+          setResultado(dados);
           setErro(null);
         })
         .catch((error) => {
@@ -38,6 +40,12 @@ export default function ApoliceList() {
       controller.abort();
     };
   }, [filtros, versao]);
+
+  useEffect(() => {
+    apolicesApi.resumo().then(setResumo).catch(() => setResumo(null));
+  }, [versao]);
+
+  const filtrar = (campo) => (event) => setFiltros((atual) => ({ ...atual, [campo]: event.target.value, pagina: 1 }));
 
   async function excluir() {
     setExcluindo(true);
@@ -53,9 +61,7 @@ export default function ApoliceList() {
     }
   }
 
-  const totalPremios = apolices
-    .filter((apolice) => apolice.status === 'ativa')
-    .reduce((total, apolice) => total + apolice.valorPremioCentavos, 0);
+  const apolices = resultado.dados;
 
   return (
     <>
@@ -69,16 +75,16 @@ export default function ApoliceList() {
 
       <section className="stats">
         <div className="card stat">
-          <span>Apólices listadas</span>
-          <strong>{apolices.length}</strong>
+          <span>Apólices</span>
+          <strong>{resumo?.total ?? '—'}</strong>
         </div>
         <div className="card stat">
           <span>Ativas</span>
-          <strong>{apolices.filter((a) => a.status === 'ativa').length}</strong>
+          <strong>{resumo?.ativas ?? '—'}</strong>
         </div>
         <div className="card stat">
           <span>Prêmios ativos</span>
-          <strong>{formatarMoeda(totalPremios)}</strong>
+          <strong>{resumo ? formatarMoeda(resumo.premioAtivasCentavos) : '—'}</strong>
         </div>
       </section>
 
@@ -88,14 +94,10 @@ export default function ApoliceList() {
             type="search"
             placeholder="Buscar por nome, CPF, e-mail ou nº da apólice"
             value={filtros.busca}
-            onChange={(e) => setFiltros((f) => ({ ...f, busca: e.target.value }))}
+            onChange={filtrar('busca')}
             aria-label="Buscar"
           />
-          <select
-            value={filtros.status}
-            onChange={(e) => setFiltros((f) => ({ ...f, status: e.target.value }))}
-            aria-label="Filtrar por status"
-          >
+          <select value={filtros.status} onChange={filtrar('status')} aria-label="Filtrar por status">
             <option value="">Todos os status</option>
             <option value="ativa">Ativas</option>
             <option value="cancelada">Canceladas</option>
@@ -148,17 +150,20 @@ export default function ApoliceList() {
             </tbody>
           </table>
 
-          {!carregando && !erro && apolices.length === 0 && (
-            <p className="vazio">Nenhuma apólice encontrada.</p>
-          )}
+          {!carregando && !erro && apolices.length === 0 && <p className="vazio">Nenhuma apólice encontrada.</p>}
           {carregando && apolices.length === 0 && <p className="vazio">Carregando...</p>}
         </div>
+
+        <Paginacao
+          paginacao={resultado.paginacao}
+          onMudar={(pagina) => setFiltros((atual) => ({ ...atual, pagina }))}
+        />
       </div>
 
       <ConfirmDialog
         aberto={Boolean(paraExcluir)}
         titulo="Excluir apólice"
-        mensagem={paraExcluir && `Deseja realmente excluir a apólice ${paraExcluir.numero} de ${paraExcluir.seguradoNome}? Esta ação não pode ser desfeita.`}
+        mensagem={paraExcluir && `Deseja excluir a apólice ${paraExcluir.numero} de ${paraExcluir.seguradoNome}? Ela deixa de aparecer no sistema, mas o registro é mantido para auditoria.`}
         textoConfirmar="Excluir"
         carregando={excluindo}
         onConfirmar={excluir}

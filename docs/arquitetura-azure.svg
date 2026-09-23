@@ -1,0 +1,103 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 690" width="1200" height="690" font-family="Segoe UI, Inter, Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="seta" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#3b4a5e"/>
+    </marker>
+    <marker id="seta-deploy" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#8a5cf6"/>
+    </marker>
+    <style>
+      .caixa { fill: #ffffff; stroke: #c7d3e0; stroke-width: 1.5; }
+      .externo { fill: #f4f6f9; stroke: #c7d3e0; stroke-width: 1.5; }
+      .faixa { fill: #0078d4; }
+      .titulo { font-size: 15px; font-weight: 700; fill: #1b2533; }
+      .sub { font-size: 12.5px; fill: #5d6b7e; }
+      .rotulo { font-size: 11.5px; fill: #3b4a5e; font-weight: 600; }
+      .linha { stroke: #3b4a5e; stroke-width: 1.6; fill: none; marker-end: url(#seta); }
+      .deploy { stroke: #8a5cf6; stroke-width: 1.6; stroke-dasharray: 6 5; fill: none; marker-end: url(#seta-deploy); }
+    </style>
+  </defs>
+
+  <rect width="1200" height="690" fill="#ffffff"/>
+
+  <text x="40" y="46" font-size="22" font-weight="700" fill="#1b2533">Seguro Viagem · Gestão de Apólices — arquitetura na Azure</text>
+
+  <rect x="280" y="80" width="890" height="580" rx="14" fill="#f5f9fd" stroke="#0078d4" stroke-width="1.5" stroke-dasharray="8 6"/>
+  <text x="300" y="110" font-size="13" font-weight="700" fill="#0078d4">AZURE · Resource Group rg-coris-seguros · Brazil South</text>
+
+  <rect class="externo" x="40" y="150" width="170" height="90" rx="10"/>
+  <text class="titulo" x="125" y="188" text-anchor="middle">Usuário</text>
+  <text class="sub" x="125" y="208" text-anchor="middle">Navegador (desktop/mobile)</text>
+
+  <rect class="externo" x="40" y="520" width="170" height="110" rx="10"/>
+  <text class="titulo" x="125" y="558" text-anchor="middle">GitHub</text>
+  <text class="sub" x="125" y="578" text-anchor="middle">Repositório público</text>
+  <text class="sub" x="125" y="596" text-anchor="middle">GitHub Actions (CI/CD)</text>
+
+  <rect class="caixa" x="330" y="140" width="280" height="100" rx="10"/>
+  <rect class="faixa" x="330" y="140" width="6" height="100" rx="3"/>
+  <text class="titulo" x="350" y="172">Azure Static Web Apps</text>
+  <text class="sub" x="350" y="194">Frontend React 18 (SPA)</text>
+  <text class="sub" x="350" y="213">CDN global · HTTPS automático · plano Free</text>
+
+  <rect class="caixa" x="330" y="320" width="280" height="110" rx="10"/>
+  <rect class="faixa" x="330" y="320" width="6" height="110" rx="3"/>
+  <text class="titulo" x="350" y="352">Azure App Service (Linux)</text>
+  <text class="sub" x="350" y="374">API REST · PHP 8.3 + nginx</text>
+  <text class="sub" x="350" y="393">Managed Identity · health check</text>
+  <text class="sub" x="350" y="412">Escala horizontal (scale out)</text>
+
+  <rect class="caixa" x="330" y="530" width="280" height="100" rx="10"/>
+  <rect class="faixa" x="330" y="530" width="6" height="100" rx="3"/>
+  <text class="titulo" x="350" y="562">Azure Database for MySQL</text>
+  <text class="sub" x="350" y="584">Flexible Server · MySQL 8.0</text>
+  <text class="sub" x="350" y="603">Backup automático 7 dias · TLS obrigatório</text>
+
+  <rect class="caixa" x="720" y="140" width="260" height="100" rx="10"/>
+  <rect class="faixa" x="720" y="140" width="6" height="100" rx="3"/>
+  <text class="titulo" x="740" y="172">Microsoft Entra ID</text>
+  <text class="sub" x="740" y="194">Identidade gerenciada da API</text>
+  <text class="sub" x="740" y="213">Sem senha no código</text>
+
+  <rect class="caixa" x="720" y="320" width="260" height="110" rx="10"/>
+  <rect class="faixa" x="720" y="320" width="6" height="110" rx="3"/>
+  <text class="titulo" x="740" y="352">Azure Key Vault</text>
+  <text class="sub" x="740" y="374">Segredo: senha do banco</text>
+  <text class="sub" x="740" y="393">RBAC: Key Vault Secrets User</text>
+  <text class="sub" x="740" y="412">Key Vault Reference no App Service</text>
+
+  <rect class="caixa" x="720" y="530" width="260" height="100" rx="10"/>
+  <rect class="faixa" x="720" y="530" width="6" height="100" rx="3"/>
+  <text class="titulo" x="740" y="562">Application Insights</text>
+  <text class="sub" x="740" y="584">+ Log Analytics</text>
+  <text class="sub" x="740" y="603">Requisições, falhas e latência</text>
+
+  <rect x="1010" y="140" width="140" height="96" rx="10" fill="#ffffff" stroke="#c7d3e0"/>
+  <text x="1024" y="164" font-size="12" font-weight="700" fill="#1b2533">Legenda</text>
+  <line x1="1024" y1="186" x2="1064" y2="186" stroke="#3b4a5e" stroke-width="1.6"/>
+  <text x="1072" y="190" class="sub">requisição</text>
+  <line x1="1024" y1="212" x2="1064" y2="212" stroke="#8a5cf6" stroke-width="1.6" stroke-dasharray="6 5"/>
+  <text x="1072" y="216" class="sub">deploy</text>
+
+  <path class="linha" d="M210 190 H326"/>
+  <text class="rotulo" x="222" y="183">site</text>
+
+  <path class="linha" d="M210 222 H290 V365 H326"/>
+  <text class="rotulo" x="222" y="215">API</text>
+
+  <path class="linha" d="M470 430 V526"/>
+  <text class="rotulo" x="480" y="484">PDO · TLS</text>
+
+  <path class="linha" d="M610 375 H716"/>
+  <text class="rotulo" x="622" y="367">lê segredo</text>
+
+  <path class="linha" d="M610 340 H660 V190 H716"/>
+  <text class="rotulo" x="668" y="270">token</text>
+
+  <path class="linha" d="M610 410 H660 V580 H716"/>
+  <text class="rotulo" x="668" y="500">telemetria</text>
+
+  <path class="deploy" d="M210 560 H250 V400 H326"/>
+  <path class="deploy" d="M250 400 V270 H400 V244"/>
+  <text x="125" y="652" text-anchor="middle" font-size="12" font-weight="600" fill="#8a5cf6">deploy automático a cada push</text>
+</svg>

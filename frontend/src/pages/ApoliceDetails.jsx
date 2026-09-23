@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { apolicesApi } from '../api/apolices';
 import ConfirmDialog from '../components/ConfirmDialog';
@@ -14,11 +14,6 @@ export default function ApoliceDetails() {
   const { apolice, erro } = useApolice(id);
   const [confirmando, setConfirmando] = useState(false);
   const [excluindo, setExcluindo] = useState(false);
-  const [endossos, setEndossos] = useState([]);
-
-  useEffect(() => {
-    apolicesApi.endossos(id).then(setEndossos).catch(() => setEndossos([]));
-  }, [id]);
 
   async function excluir() {
     setExcluindo(true);
@@ -87,36 +82,6 @@ export default function ApoliceDetails() {
           </dl>
         </section>
       </div>
-
-      <section className="card endossos">
-        <h2>Histórico de endossos</h2>
-        {endossos.length === 0 ? (
-          <p className="muted">Nenhuma alteração desde a emissão.</p>
-        ) : (
-          <ol className="endossos__lista">
-            {endossos.map((endosso) => (
-              <li key={endosso.id}>
-                <div className="endossos__cabecalho">
-                  <strong>Endosso nº {endosso.numero}</strong>
-                  <span className="muted">
-                    {formatarDataHora(endosso.criadoEm)} · {endosso.usuario}
-                  </span>
-                </div>
-                <ul>
-                  {endosso.alteracoes.map((alteracao) => (
-                    <li key={alteracao}>{alteracao}</li>
-                  ))}
-                </ul>
-                {endosso.diferencaCentavos !== 0 && (
-                  <span className={endosso.diferencaCentavos > 0 ? 'diferenca diferenca--mais' : 'diferenca diferenca--menos'}>
-                    {endosso.diferencaCentavos > 0 ? '+' : '−'} {formatarMoeda(Math.abs(endosso.diferencaCentavos))} no prêmio
-                  </span>
-                )}
-              </li>
-            ))}
-          </ol>
-        )}
-      </section>
 
       <ConfirmDialog
         aberto={confirmando}

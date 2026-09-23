@@ -10,7 +10,7 @@ import { formatarData, formatarMoeda } from '../utils/format';
 export default function ApoliceList() {
   const navigate = useNavigate();
   const notificar = useToast();
-  const [resultado, setResultado] = useState({ dados: [], paginacao: null });
+  const [resultado, setResultado] = useState({ data: [], meta: null });
   const [resumo, setResumo] = useState(null);
   const [filtros, setFiltros] = useState({ busca: '', status: '', pagina: 1 });
   const [carregando, setCarregando] = useState(true);
@@ -61,7 +61,7 @@ export default function ApoliceList() {
     }
   }
 
-  const apolices = resultado.dados;
+  const apolices = resultado.data;
 
   return (
     <>
@@ -155,7 +155,7 @@ export default function ApoliceList() {
         </div>
 
         <Paginacao
-          paginacao={resultado.paginacao}
+          meta={resultado.meta}
           onMudar={(pagina) => setFiltros((atual) => ({ ...atual, pagina }))}
         />
       </div>

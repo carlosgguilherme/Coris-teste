@@ -63,11 +63,6 @@ export default function ApoliceForm({ inicial, edicao = false, textoBotao, onSub
     <form className="form-layout" onSubmit={enviar} noValidate>
       <div className="card form-card">
         {erroGeral && <div className="alert alert--erro">{erroGeral}</div>}
-        {edicao && (
-          <div className="alert alert--info">
-            Toda alteração em uma apólice emitida gera um endosso, com o histórico do que mudou e a diferença de prêmio.
-          </div>
-        )}
 
         <fieldset>
           <legend>Dados do segurado</legend>
@@ -76,7 +71,7 @@ export default function ApoliceForm({ inicial, edicao = false, textoBotao, onSub
               <input {...campo('seguradoNome')} autoComplete="name" />
             </Campo>
             <Campo label="CPF" campo="seguradoCpf" erro={erros.seguradoCpf}>
-              <input {...campo('seguradoCpf')} inputMode="numeric" placeholder="000.000.000-00" readOnly={edicao} />
+              <input {...campo('seguradoCpf')} inputMode="numeric" placeholder="000.000.000-00" />
             </Campo>
             <Campo label="Data de nascimento" campo="seguradoNascimento" erro={erros.seguradoNascimento}>
               <input {...campo('seguradoNascimento')} type="date" />

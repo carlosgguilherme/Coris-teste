@@ -2,7 +2,7 @@
 set -e
 
 tentativas=0
-until php bin/migrate.php; do
+until php artisan migrate --force; do
     tentativas=$((tentativas + 1))
     if [ "$tentativas" -ge 20 ]; then
         echo "Banco de dados indisponível."
@@ -11,7 +11,5 @@ until php bin/migrate.php; do
     echo "Aguardando o banco de dados..."
     sleep 3
 done
-
-php bin/criar-admin.php
 
 exec "$@"

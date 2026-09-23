@@ -1,14 +1,31 @@
 <?php
 
-declare(strict_types=1);
+use Illuminate\Foundation\Application;
+use Illuminate\Foundation\Configuration\Exceptions;
+use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Request;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-use App\Container;
-use App\Infrastructure\Config\Env;
-use App\Infrastructure\Database\ConnectionFactory;
+return Application::configure(basePath: dirname(__DIR__))
+    ->withRouting(
+        web: __DIR__.'/../routes/web.php',
+        api: __DIR__.'/../routes/api.php',
+        commands: __DIR__.'/../routes/console.php',
+        health: '/up',
+    )
+    ->withMiddleware(function (Middleware $middleware): void {
+        //
+    })
+    ->withExceptions(function (Exceptions $exceptions): void {
+        $exceptions->shouldRenderJsonWhen(fn (Request $request) => $request->is('api/*'));
 
-require_once __DIR__ . '/../vendor/autoload.php';
+        $exceptions->render(function (NotFoundHttpException $e, Request $request) {
+            if ($request->is('api/*')) {
+                $apoliceNaoEncontrada = str_contains($e->getMessage(), 'Apolice');
 
-Env::load(__DIR__ . '/../.env');
-date_default_timezone_set(Env::get('APP_TIMEZONE', 'America/Sao_Paulo'));
-
-return new Container(ConnectionFactory::fromEnv(dirname(__DIR__)));
+                return response()->json([
+                    'message' => $apoliceNaoEncontrada ? 'Apólice não encontrada.' : 'Rota não encontrada.',
+                ], 404);
+            }
+        });
+    })->create();

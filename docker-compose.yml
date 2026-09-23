@@ -19,18 +19,21 @@ services:
   api:
     build: ./backend
     environment:
+      APP_NAME: "Seguro Viagem"
+      APP_ENV: local
+      APP_DEBUG: "false"
+      APP_KEY: base64:Z3VhcmRhLWNoYXZlLWxvY2FsLWRvLWRvY2tlci0zMmI=
+      APP_TIMEZONE: America/Sao_Paulo
+      APP_LOCALE: pt_BR
+      LOG_CHANNEL: stderr
       DB_CONNECTION: mysql
       DB_HOST: mysql
       DB_PORT: 3306
       DB_DATABASE: coris_seguros
       DB_USERNAME: coris
       DB_PASSWORD: coris123
-      CORS_ALLOWED_ORIGIN: "*"
-      APP_DEBUG: "false"
-      JWT_SECRET: segredo-local-do-docker-com-mais-de-32-caracteres
-      ADMIN_NOME: Administrador
-      ADMIN_EMAIL: admin@seguroviagem.com
-      ADMIN_SENHA: Admin@123
+      SESSION_DRIVER: array
+      CACHE_STORE: file
     ports:
       - "8000:80"
     depends_on:

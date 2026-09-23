@@ -1,149 +1,164 @@
 <?php
 
-declare(strict_types=1);
-
 namespace Tests\Feature;
 
-use App\Container;
-use App\Domain\Usuario\Usuario;
-use App\Http\Kernel;
-use App\Http\Request;
-use App\Http\Response;
-use App\Infrastructure\Database\ConnectionFactory;
-use App\Infrastructure\Database\Migrator;
-use PHPUnit\Framework\TestCase;
-use Tests\Support\RelogioFixo;
+use App\Models\Apolice;
+use App\Models\Segurado;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
+use Tests\TestCase;
 
-final class ApoliceApiTest extends TestCase
+class ApoliceApiTest extends TestCase
 {
-    private Kernel $kernel;
-    private string $token;
+    use RefreshDatabase;
 
     protected function setUp(): void
     {
-        $pdo = ConnectionFactory::sqlite(':memory:');
-        (new Migrator($pdo, __DIR__ . '/../../database/schema'))->migrar();
-
-        $container = new Container($pdo, new RelogioFixo());
-        $container->usuarios()->salvar(Usuario::cadastrar('Operador', 'operador@email.com', 'senha-forte-123'));
-
-        $this->kernel = $container->kernel();
-        $this->token = $this->request('POST', '/api/auth/login', ['email' => 'operador@email.com', 'senha' => 'senha-forte-123'])->body['token'];
+        parent::setUp();
+        Carbon::setTestNow('2026-09-20 10:00:00');
     }
 
-    public function testRotasProtegidasExigemToken(): void
+    public function test_cria_apolice_calculando_o_premio(): void
     {
-        $semToken = $this->kernel->handle(new Request('GET', '/api/apolices'));
+        $resposta = $this->postJson('/api/apolices', $this->payload());
 
-        $this->assertSame(401, $semToken->status);
-        $this->assertSame(200, $this->request('GET', '/api/health')->status);
-        $this->assertSame(['nome' => 'Operador', 'email' => 'operador@email.com'], $this->request('GET', '/api/auth/eu')->body);
+        $resposta->assertCreated()
+            ->assertJsonPath('valorPremioCentavos', 32370)
+            ->assertJsonPath('status', 'ativa')
+            ->assertJsonPath('seguradoCpf', '529.982.247-25')
+            ->assertJsonPath('dias', 10);
+
+        $this->assertMatchesRegularExpression('/^CRS-2026-[A-F0-9]{8}$/', $resposta->json('numero'));
+        $this->assertDatabaseHas('segurados', ['cpf' => '52998224725']);
     }
 
-    public function testLoginComSenhaErradaRetorna401(): void
+    public function test_reaproveita_o_segurado_pelo_cpf(): void
     {
-        $resposta = $this->request('POST', '/api/auth/login', ['email' => 'operador@email.com', 'senha' => 'errada']);
+        $primeira = $this->postJson('/api/apolices', $this->payload());
+        $segunda = $this->postJson('/api/apolices', [...$this->payload(), 'destino' => 'asia']);
 
-        $this->assertSame(401, $resposta->status);
+        $this->assertSame($primeira->json('seguradoId'), $segunda->json('seguradoId'));
+        $this->assertSame(1, Segurado::count());
     }
 
-    public function testFluxoCompletoComEndossoEExclusaoLogica(): void
-    {
-        $criada = $this->request('POST', '/api/apolices', $this->payload());
-        $this->assertSame(201, $criada->status);
-        $this->assertMatchesRegularExpression('/^CRS-\d{4}-[A-F0-9]{8}$/', $criada->body['numero']);
-        $this->assertSame(32_370, $criada->body['valorPremioCentavos']);
-        $id = $criada->body['id'];
-
-        $atualizada = $this->request('PUT', "/api/apolices/{$id}", [...$this->payload(), 'plano' => 'premium']);
-        $this->assertSame(200, $atualizada->status);
-        $this->assertSame(51_870, $atualizada->body['valorPremioCentavos']);
-
-        $endossos = $this->request('GET', "/api/apolices/{$id}/endossos")->body;
-        $this->assertCount(1, $endossos);
-        $this->assertSame(1, $endossos[0]['numero']);
-        $this->assertSame(19_500, $endossos[0]['diferencaCentavos']);
-        $this->assertSame('operador@email.com', $endossos[0]['usuario']);
-        $this->assertContains('Plano: Plus → Premium', $endossos[0]['alteracoes']);
-
-        $this->assertSame(204, $this->request('DELETE', "/api/apolices/{$id}")->status);
-        $this->assertSame(404, $this->request('GET', "/api/apolices/{$id}")->status);
-        $this->assertSame(0, $this->request('GET', '/api/apolices')->body['paginacao']['total']);
-    }
-
-    public function testSeguradoEReaproveitadoPeloCpf(): void
-    {
-        $primeira = $this->request('POST', '/api/apolices', $this->payload());
-        $segunda = $this->request('POST', '/api/apolices', [...$this->payload(), 'destino' => 'asia']);
-
-        $this->assertSame($primeira->body['seguradoId'], $segunda->body['seguradoId']);
-    }
-
-    public function testCpfNaoPodeSerAlteradoNoEndosso(): void
-    {
-        $id = $this->request('POST', '/api/apolices', $this->payload())->body['id'];
-
-        $resposta = $this->request('PUT', "/api/apolices/{$id}", [...$this->payload(), 'seguradoCpf' => '111.444.777-35']);
-
-        $this->assertSame(422, $resposta->status);
-        $this->assertArrayHasKey('seguradoCpf', $resposta->body['errors']);
-    }
-
-    public function testRegraDeNegocioRetornaErroNoCampo(): void
-    {
-        $passado = $this->request('POST', '/api/apolices', [...$this->payload(), 'inicioVigencia' => '2026-09-01']);
-        $invertida = $this->request('POST', '/api/apolices', [...$this->payload(), 'fimVigencia' => '2026-09-25']);
-
-        $this->assertSame(['inicioVigencia' => 'O início da vigência não pode ser anterior a hoje.'], $passado->body['errors']);
-        $this->assertArrayHasKey('fimVigencia', $invertida->body['errors']);
-    }
-
-    public function testListagemPaginadaComFiltrosEResumo(): void
+    public function test_lista_com_paginacao_busca_e_filtro(): void
     {
         foreach (['529.982.247-25', '111.444.777-35', '390.533.447-05'] as $indice => $cpf) {
-            $this->request('POST', '/api/apolices', [...$this->payload(), 'seguradoCpf' => $cpf, 'seguradoNome' => "Segurado {$indice}"]);
+            $this->postJson('/api/apolices', [...$this->payload(), 'seguradoCpf' => $cpf, 'seguradoNome' => "Segurado {$indice}"]);
         }
 
-        $pagina = $this->request('GET', '/api/apolices', query: ['porPagina' => '2', 'pagina' => '2'])->body;
-        $this->assertCount(1, $pagina['dados']);
-        $this->assertSame(['pagina' => 2, 'porPagina' => 2, 'total' => 3, 'totalPaginas' => 2], $pagina['paginacao']);
+        $this->getJson('/api/apolices')
+            ->assertOk()
+            ->assertJsonCount(3, 'data')
+            ->assertJsonPath('meta.total', 3)
+            ->assertJsonPath('meta.current_page', 1);
 
-        $this->assertSame(1, $this->request('GET', '/api/apolices', query: ['busca' => '390.533'])->body['paginacao']['total']);
-        $this->assertSame(0, $this->request('GET', '/api/apolices', query: ['status' => 'cancelada'])->body['paginacao']['total']);
-
-        $this->assertSame(
-            ['total' => 3, 'ativas' => 3, 'premioAtivasCentavos' => 97_110],
-            $this->request('GET', '/api/apolices/resumo')->body,
-        );
+        $this->getJson('/api/apolices?busca=390.533')->assertJsonPath('meta.total', 1);
+        $this->getJson('/api/apolices?busca=Segurado 1')->assertJsonPath('data.0.seguradoCpf', '111.444.777-35');
+        $this->getJson('/api/apolices?status=cancelada')->assertJsonPath('meta.total', 0);
     }
 
-    public function testCotacaoNaoPersisteApolice(): void
+    public function test_edita_e_recalcula_o_premio(): void
     {
-        $cotacao = $this->request('POST', '/api/apolices/cotacao', $this->payload());
+        $id = $this->postJson('/api/apolices', $this->payload())->json('id');
 
-        $this->assertSame(['valorPremioCentavos' => 32_370, 'dias' => 10], $cotacao->body);
-        $this->assertSame(0, $this->request('GET', '/api/apolices/resumo')->body['total']);
+        $this->putJson("/api/apolices/{$id}", [...$this->payload(), 'plano' => 'premium'])
+            ->assertOk()
+            ->assertJsonPath('plano', 'premium')
+            ->assertJsonPath('valorPremioCentavos', 51870);
     }
 
-    public function testRotaInexistenteEMetodoNaoPermitido(): void
+    public function test_apolice_cancelada_so_pode_ser_reativada(): void
     {
-        $this->assertSame(404, $this->request('GET', '/api/inexistente')->status);
-        $this->assertSame(405, $this->request('PATCH', '/api/apolices')->status);
+        $id = $this->postJson('/api/apolices', $this->payload())->json('id');
+        $this->putJson("/api/apolices/{$id}", [...$this->payload(), 'status' => 'cancelada'])->assertOk();
+
+        $this->putJson("/api/apolices/{$id}", [...$this->payload(), 'status' => 'cancelada', 'destino' => 'asia'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('status');
+
+        $this->putJson("/api/apolices/{$id}", [...$this->payload(), 'status' => 'ativa'])
+            ->assertOk()
+            ->assertJsonPath('status', 'ativa');
     }
 
-    public function testPreflightCorsRetornaCabecalhos(): void
+    public function test_exclusao_logica(): void
     {
-        $resposta = $this->kernel->handle(new Request('OPTIONS', '/api/apolices'));
+        $id = $this->postJson('/api/apolices', $this->payload())->json('id');
 
-        $this->assertSame(204, $resposta->status);
-        $this->assertStringContainsString('Authorization', $resposta->headers()['Access-Control-Allow-Headers']);
+        $this->deleteJson("/api/apolices/{$id}")->assertNoContent();
+
+        $this->getJson("/api/apolices/{$id}")
+            ->assertNotFound()
+            ->assertJsonPath('message', 'Apólice não encontrada.');
+        $this->assertSoftDeleted('apolices', ['id' => $id]);
+        $this->getJson('/api/apolices')->assertJsonPath('meta.total', 0);
     }
 
-    private function request(string $method, string $path, ?array $body = null, array $query = []): Response
+    public function test_valida_os_campos_em_portugues(): void
     {
-        $headers = isset($this->token) ? ['authorization' => "Bearer {$this->token}"] : [];
+        $this->postJson('/api/apolices', [...$this->payload(), 'seguradoCpf' => '123.456.789-00', 'plano' => 'ouro'])
+            ->assertUnprocessable()
+            ->assertJsonPath('errors.seguradoCpf.0', 'CPF inválido.')
+            ->assertJsonPath('errors.plano.0', 'Plano inválido.');
+    }
 
-        return $this->kernel->handle(new Request($method, $path, $query, $body === null ? '' : json_encode($body), $headers));
+    public function test_vigencia_nao_pode_comecar_no_passado_nem_passar_de_365_dias(): void
+    {
+        $this->postJson('/api/apolices', [...$this->payload(), 'inicioVigencia' => '2026-09-19'])
+            ->assertJsonPath('errors.inicioVigencia.0', 'O início da vigência não pode ser anterior a hoje.');
+
+        $this->postJson('/api/apolices', [...$this->payload(), 'fimVigencia' => '2027-10-01'])
+            ->assertJsonPath('errors.fimVigencia.0', 'A vigência máxima é de 365 dias.');
+
+        $this->postJson('/api/apolices', [...$this->payload(), 'fimVigencia' => '2026-09-30'])
+            ->assertJsonValidationErrors('fimVigencia');
+    }
+
+    public function test_apolice_ja_em_vigor_pode_ser_editada_sem_mudar_o_inicio(): void
+    {
+        $id = $this->postJson('/api/apolices', $this->payload())->json('id');
+        Carbon::setTestNow('2026-10-05');
+
+        $this->putJson("/api/apolices/{$id}", [...$this->payload(), 'plano' => 'premium'])->assertOk();
+    }
+
+    public function test_cotacao_nao_persiste(): void
+    {
+        $this->postJson('/api/apolices/cotacao', $this->payload())
+            ->assertOk()
+            ->assertExactJson(['valorPremioCentavos' => 32370, 'dias' => 10]);
+
+        $this->assertSame(0, Apolice::count());
+    }
+
+    public function test_resumo_ignora_canceladas_e_excluidas(): void
+    {
+        $ids = collect(['529.982.247-25', '111.444.777-35', '390.533.447-05'])
+            ->map(fn ($cpf) => $this->postJson('/api/apolices', [...$this->payload(), 'seguradoCpf' => $cpf])->json('id'));
+
+        $this->putJson("/api/apolices/{$ids[1]}", [...$this->payload(), 'seguradoCpf' => '111.444.777-35', 'status' => 'cancelada']);
+        $this->deleteJson("/api/apolices/{$ids[2]}");
+
+        $this->getJson('/api/apolices/resumo')->assertExactJson([
+            'total' => 2,
+            'ativas' => 1,
+            'premioAtivasCentavos' => 32370,
+        ]);
+    }
+
+    public function test_opcoes_e_health(): void
+    {
+        $this->getJson('/api/health')->assertExactJson(['status' => 'ok']);
+        $this->getJson('/api/opcoes')
+            ->assertJsonCount(3, 'planos')
+            ->assertJsonPath('planos.1.valorDiariaCentavos', 2490)
+            ->assertJsonCount(7, 'destinos');
+    }
+
+    public function test_rota_inexistente(): void
+    {
+        $this->getJson('/api/inexistente')->assertNotFound()->assertJsonPath('message', 'Rota não encontrada.');
     }
 
     private function payload(): array

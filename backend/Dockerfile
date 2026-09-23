@@ -13,7 +13,8 @@ WORKDIR /var/www/html
 COPY --from=vendor /app/vendor ./vendor
 COPY . .
 COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh && chown -R www-data:www-data database
+RUN sed -i 's/\r$//' /usr/local/bin/entrypoint.sh azure/startup.sh \
+    && chmod +x /usr/local/bin/entrypoint.sh && chown -R www-data:www-data database
 
 ENTRYPOINT ["entrypoint.sh"]
 CMD ["apache2-foreground"]

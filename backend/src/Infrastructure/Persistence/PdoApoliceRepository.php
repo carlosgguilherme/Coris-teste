@@ -7,12 +7,12 @@ namespace App\Infrastructure\Persistence;
 use App\Domain\Apolice\Apolice;
 use App\Domain\Apolice\ApoliceRepository;
 use App\Domain\Apolice\Destino;
+use App\Domain\Apolice\FiltroApolices;
 use App\Domain\Apolice\Plano;
-use App\Domain\Apolice\Segurado;
 use App\Domain\Apolice\StatusApolice;
 use App\Domain\Apolice\Vigencia;
-use App\Domain\Shared\Cpf;
 use App\Domain\Shared\Dinheiro;
+use App\Domain\Shared\Pagina;
 use DateTimeImmutable;
 use PDO;
 
@@ -21,49 +21,69 @@ final class PdoApoliceRepository implements ApoliceRepository
     private const FORMATO_DATA = 'Y-m-d';
     private const FORMATO_DATA_HORA = 'Y-m-d H:i:s';
 
+    private const SELECT = 'SELECT a.*, s.id AS s_id, s.nome AS s_nome, s.cpf AS s_cpf, s.email AS s_email,
+            s.data_nascimento AS s_data_nascimento
+        FROM apolices a
+        INNER JOIN segurados s ON s.id = a.segurado_id';
+
     public function __construct(private readonly PDO $pdo)
     {
     }
 
-    public function listar(?string $busca = null, ?StatusApolice $status = null): array
+    public function listar(FiltroApolices $filtro): Pagina
     {
-        $sql = 'SELECT * FROM apolices WHERE 1 = 1';
-        $parametros = [];
+        [$where, $parametros] = $this->condicoes($filtro);
 
-        if ($busca !== null) {
-            $sql .= ' AND (segurado_nome LIKE :nome OR numero LIKE :numero OR segurado_email LIKE :email';
-            $termo = "%{$busca}%";
-            $parametros += ['nome' => $termo, 'numero' => $termo, 'email' => $termo];
+        $total = $this->pdo->prepare("SELECT COUNT(*) FROM apolices a INNER JOIN segurados s ON s.id = a.segurado_id {$where}");
+        $total->execute($parametros);
 
-            $digitos = preg_replace('/\D/', '', $busca);
-            if ($digitos !== '') {
-                $sql .= ' OR segurado_cpf LIKE :cpf';
-                $parametros['cpf'] = "%{$digitos}%";
-            }
-
-            $sql .= ')';
+        $stmt = $this->pdo->prepare(self::SELECT . " {$where} ORDER BY a.criado_em DESC, a.id DESC LIMIT :limite OFFSET :deslocamento");
+        foreach ($parametros as $nome => $valor) {
+            $stmt->bindValue($nome, $valor);
         }
+        $stmt->bindValue('limite', $filtro->porPagina, PDO::PARAM_INT);
+        $stmt->bindValue('deslocamento', $filtro->deslocamento(), PDO::PARAM_INT);
+        $stmt->execute();
 
-        if ($status !== null) {
-            $sql .= ' AND status = :status';
-            $parametros['status'] = $status->value;
-        }
+        return new Pagina(
+            itens: array_map($this->hidratar(...), $stmt->fetchAll()),
+            total: (int) $total->fetchColumn(),
+            pagina: $filtro->pagina,
+            porPagina: $filtro->porPagina,
+        );
+    }
 
-        $sql .= ' ORDER BY criado_em DESC, id DESC';
+    public function resumo(): array
+    {
+        $linha = $this->pdo->query(
+            "SELECT COUNT(*) AS total,
+                SUM(CASE WHEN status = 'ativa' THEN 1 ELSE 0 END) AS ativas,
+                SUM(CASE WHEN status = 'ativa' THEN valor_premio_centavos ELSE 0 END) AS premio_ativas
+             FROM apolices WHERE excluido_em IS NULL"
+        )->fetch();
 
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute($parametros);
-
-        return array_map($this->hidratar(...), $stmt->fetchAll());
+        return [
+            'total' => (int) $linha['total'],
+            'ativas' => (int) $linha['ativas'],
+            'premioAtivasCentavos' => (int) $linha['premio_ativas'],
+        ];
     }
 
     public function buscarPorId(int $id): ?Apolice
     {
-        $stmt = $this->pdo->prepare('SELECT * FROM apolices WHERE id = :id');
+        $stmt = $this->pdo->prepare(self::SELECT . ' WHERE a.id = :id AND a.excluido_em IS NULL');
         $stmt->execute(['id' => $id]);
         $linha = $stmt->fetch();
 
         return $linha ? $this->hidratar($linha) : null;
+    }
+
+    public function numeroExiste(string $numero): bool
+    {
+        $stmt = $this->pdo->prepare('SELECT 1 FROM apolices WHERE numero = :numero');
+        $stmt->execute(['numero' => $numero]);
+
+        return (bool) $stmt->fetchColumn();
     }
 
     public function salvar(Apolice $apolice): void
@@ -71,33 +91,52 @@ final class PdoApoliceRepository implements ApoliceRepository
         $apolice->id() === null ? $this->inserir($apolice) : $this->atualizar($apolice);
     }
 
-    public function excluir(int $id): void
+    /** @return array{0: string, 1: array<string, string>} */
+    private function condicoes(FiltroApolices $filtro): array
     {
-        $this->pdo->prepare('DELETE FROM apolices WHERE id = :id')->execute(['id' => $id]);
+        $condicoes = ['a.excluido_em IS NULL'];
+        $parametros = [];
+
+        if ($filtro->busca !== null && trim($filtro->busca) !== '') {
+            $termo = '%' . trim($filtro->busca) . '%';
+            $busca = ['s.nome LIKE :nome', 'a.numero LIKE :numero', 's.email LIKE :email'];
+            $parametros += ['nome' => $termo, 'numero' => $termo, 'email' => $termo];
+
+            $digitos = preg_replace('/\D/', '', $filtro->busca);
+            if ($digitos !== '') {
+                $busca[] = 's.cpf LIKE :cpf';
+                $parametros['cpf'] = "%{$digitos}%";
+            }
+
+            $condicoes[] = '(' . implode(' OR ', $busca) . ')';
+        }
+
+        if ($filtro->status !== null) {
+            $condicoes[] = 'a.status = :status';
+            $parametros['status'] = $filtro->status->value;
+        }
+
+        return ['WHERE ' . implode(' AND ', $condicoes), $parametros];
     }
 
     private function inserir(Apolice $apolice): void
     {
-        $stmt = $this->pdo->prepare(
-            'INSERT INTO apolices (numero, segurado_nome, segurado_cpf, segurado_email, segurado_nascimento,
-                destino, plano, inicio_vigencia, fim_vigencia, valor_premio_centavos, status, criado_em, atualizado_em)
-             VALUES (:numero, :segurado_nome, :segurado_cpf, :segurado_email, :segurado_nascimento,
-                :destino, :plano, :inicio_vigencia, :fim_vigencia, :valor_premio_centavos, :status, :criado_em, :atualizado_em)'
-        );
+        $this->pdo->prepare(
+            'INSERT INTO apolices (numero, segurado_id, destino, plano, inicio_vigencia, fim_vigencia,
+                valor_premio_centavos, status, criado_em, atualizado_em, excluido_em)
+             VALUES (:numero, :segurado_id, :destino, :plano, :inicio_vigencia, :fim_vigencia,
+                :valor_premio_centavos, :status, :criado_em, :atualizado_em, :excluido_em)'
+        )->execute($this->extrair($apolice));
 
-        $stmt->execute($this->extrair($apolice));
         $apolice->definirId((int) $this->pdo->lastInsertId());
     }
 
     private function atualizar(Apolice $apolice): void
     {
-        $stmt = $this->pdo->prepare(
+        $this->pdo->prepare(
             'UPDATE apolices SET
                 numero = :numero,
-                segurado_nome = :segurado_nome,
-                segurado_cpf = :segurado_cpf,
-                segurado_email = :segurado_email,
-                segurado_nascimento = :segurado_nascimento,
+                segurado_id = :segurado_id,
                 destino = :destino,
                 plano = :plano,
                 inicio_vigencia = :inicio_vigencia,
@@ -105,23 +144,17 @@ final class PdoApoliceRepository implements ApoliceRepository
                 valor_premio_centavos = :valor_premio_centavos,
                 status = :status,
                 criado_em = :criado_em,
-                atualizado_em = :atualizado_em
+                atualizado_em = :atualizado_em,
+                excluido_em = :excluido_em
              WHERE id = :id'
-        );
-
-        $stmt->execute([...$this->extrair($apolice), 'id' => $apolice->id()]);
+        )->execute([...$this->extrair($apolice), 'id' => $apolice->id()]);
     }
 
     private function extrair(Apolice $apolice): array
     {
-        $segurado = $apolice->segurado();
-
         return [
             'numero' => $apolice->numero(),
-            'segurado_nome' => $segurado->nome,
-            'segurado_cpf' => $segurado->cpf->numero,
-            'segurado_email' => $segurado->email,
-            'segurado_nascimento' => $segurado->dataNascimento->format(self::FORMATO_DATA),
+            'segurado_id' => $apolice->segurado()->id(),
             'destino' => $apolice->destino()->value,
             'plano' => $apolice->plano()->value,
             'inicio_vigencia' => $apolice->vigencia()->inicio->format(self::FORMATO_DATA),
@@ -130,6 +163,7 @@ final class PdoApoliceRepository implements ApoliceRepository
             'status' => $apolice->status()->value,
             'criado_em' => $apolice->criadoEm()->format(self::FORMATO_DATA_HORA),
             'atualizado_em' => $apolice->atualizadoEm()?->format(self::FORMATO_DATA_HORA),
+            'excluido_em' => $apolice->excluidoEm()?->format(self::FORMATO_DATA_HORA),
         ];
     }
 
@@ -138,12 +172,7 @@ final class PdoApoliceRepository implements ApoliceRepository
         return Apolice::restaurar(
             id: (int) $linha['id'],
             numero: $linha['numero'],
-            segurado: new Segurado(
-                nome: $linha['segurado_nome'],
-                cpf: Cpf::from($linha['segurado_cpf']),
-                email: $linha['segurado_email'],
-                dataNascimento: new DateTimeImmutable($linha['segurado_nascimento']),
-            ),
+            segurado: PdoSeguradoRepository::hidratar($linha, 's_'),
             destino: Destino::from($linha['destino']),
             plano: Plano::from($linha['plano']),
             vigencia: new Vigencia(
@@ -154,6 +183,7 @@ final class PdoApoliceRepository implements ApoliceRepository
             status: StatusApolice::from($linha['status']),
             criadoEm: new DateTimeImmutable($linha['criado_em']),
             atualizadoEm: $linha['atualizado_em'] ? new DateTimeImmutable($linha['atualizado_em']) : null,
+            excluidoEm: $linha['excluido_em'] ? new DateTimeImmutable($linha['excluido_em']) : null,
         );
     }
 }

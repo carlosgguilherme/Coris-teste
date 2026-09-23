@@ -7,85 +7,133 @@ namespace Tests\Unit\Domain;
 use App\Domain\Apolice\Apolice;
 use App\Domain\Apolice\Destino;
 use App\Domain\Apolice\Plano;
-use App\Domain\Apolice\Segurado;
 use App\Domain\Apolice\StatusApolice;
-use App\Domain\Apolice\Vigencia;
 use App\Domain\Exception\DomainException;
-use App\Domain\Shared\Cpf;
 use App\Domain\Shared\Dinheiro;
 use DateTimeImmutable;
 use PHPUnit\Framework\TestCase;
+use Tests\Support\Fabrica;
 
 final class ApoliceTest extends TestCase
 {
-    public function testEmiteApoliceAtivaSemId(): void
-    {
-        $apolice = $this->emitir();
+    private DateTimeImmutable $agora;
 
-        $this->assertNull($apolice->id());
+    protected function setUp(): void
+    {
+        $this->agora = new DateTimeImmutable('2026-09-20 10:00:00');
+    }
+
+    public function testEmiteApoliceAtiva(): void
+    {
+        $apolice = Fabrica::apolice();
+
         $this->assertSame(StatusApolice::Ativa, $apolice->status());
         $this->assertSame('CRS-2026-TESTE', $apolice->numero());
+        $this->assertNull($apolice->excluidoEm());
+    }
+
+    public function testNaoEmiteComVigenciaIniciandoNoPassado(): void
+    {
+        $this->expectExceptionObject(new DomainException('O início da vigência não pode ser anterior a hoje.', 'inicioVigencia'));
+
+        Apolice::emitir('CRS-1', Fabrica::segurado(), Destino::Europa, Plano::Plus, Fabrica::vigencia('2026-09-19', '2026-09-25'), Dinheiro::centavos(100), $this->agora);
+    }
+
+    public function testPermiteEmitirComInicioHoje(): void
+    {
+        $apolice = Apolice::emitir('CRS-1', Fabrica::segurado(), Destino::Europa, Plano::Plus, Fabrica::vigencia('2026-09-20', '2026-09-25'), Dinheiro::centavos(100), $this->agora);
+
+        $this->assertSame(6, $apolice->vigencia()->dias());
     }
 
     public function testNaoPermitePremioZerado(): void
     {
         $this->expectException(DomainException::class);
 
-        $this->emitir(premioCentavos: 0);
+        Fabrica::apolice(premioCentavos: 0);
     }
 
-    public function testVigenciaContaOsDiasInclusive(): void
+    public function testEndossoRegistraAlteracoesEDiferencaDePremio(): void
     {
-        $vigencia = new Vigencia(new DateTimeImmutable('2026-10-01'), new DateTimeImmutable('2026-10-10'));
+        $apolice = Fabrica::apolice();
 
-        $this->assertSame(10, $vigencia->dias());
-    }
-
-    public function testVigenciaNaoPodeTerminarAntesDeComecar(): void
-    {
-        $this->expectException(DomainException::class);
-
-        new Vigencia(new DateTimeImmutable('2026-10-10'), new DateTimeImmutable('2026-10-01'));
-    }
-
-    public function testVigenciaNaoPodeUltrapassarUmAno(): void
-    {
-        $this->expectException(DomainException::class);
-
-        new Vigencia(new DateTimeImmutable('2026-01-01'), new DateTimeImmutable('2027-01-01'));
-    }
-
-    public function testApoliceCanceladaSoPodeSerAlteradaParaReativar(): void
-    {
-        $apolice = $this->emitir();
-        $apolice->atualizar($apolice->segurado(), Destino::Europa, Plano::Plus, $apolice->vigencia(), Dinheiro::centavos(10_000), StatusApolice::Cancelada);
-
-        $apolice->atualizar($apolice->segurado(), Destino::Europa, Plano::Plus, $apolice->vigencia(), Dinheiro::centavos(10_000), StatusApolice::Ativa);
-        $this->assertSame(StatusApolice::Ativa, $apolice->status());
-
-        $apolice->atualizar($apolice->segurado(), Destino::Europa, Plano::Plus, $apolice->vigencia(), Dinheiro::centavos(10_000), StatusApolice::Cancelada);
-        $this->expectException(DomainException::class);
-        $apolice->atualizar($apolice->segurado(), Destino::Asia, Plano::Plus, $apolice->vigencia(), Dinheiro::centavos(10_000), StatusApolice::Cancelada);
-    }
-
-    public function testIdSoPodeSerDefinidoUmaVez(): void
-    {
-        $apolice = $this->emitir();
-        $apolice->definirId(10);
-
-        $this->expectException(DomainException::class);
-        $apolice->definirId(11);
-    }
-
-    private function emitir(int $premioCentavos = 15_000): Apolice
-    {
-        return Apolice::emitir(
-            'CRS-2026-TESTE',
-            new Segurado('Carlos Pereira', Cpf::from('52998224725'), 'carlos@email.com', new DateTimeImmutable('1995-05-10')),
+        $endosso = $apolice->endossar(
             Destino::Europa,
-            Plano::Plus,
-            new Vigencia(new DateTimeImmutable('2026-10-01'), new DateTimeImmutable('2026-10-10')),
-            Dinheiro::centavos($premioCentavos),
+            Plano::Premium,
+            Fabrica::vigencia('2026-10-01', '2026-10-12'),
+            Dinheiro::centavos(62_244),
+            StatusApolice::Ativa,
+            ['Nome do segurado: Carlos → Carlos Pereira'],
+            'operador@email.com',
+            $this->agora,
         );
+
+        $this->assertSame([
+            'Nome do segurado: Carlos → Carlos Pereira',
+            'Plano: Plus → Premium',
+            'Vigência: 01/10/2026 a 10/10/2026 → 01/10/2026 a 12/10/2026',
+            'Prêmio: R$ 323,70 → R$ 622,44',
+        ], $endosso->alteracoes);
+        $this->assertSame(29_874, $endosso->diferencaEmCentavos());
+        $this->assertSame('operador@email.com', $endosso->usuario);
+        $this->assertSame(Plano::Premium, $apolice->plano());
+    }
+
+    public function testEndossoSemAlteracaoNaoEPermitido(): void
+    {
+        $apolice = Fabrica::apolice();
+
+        $this->expectExceptionMessage('Nenhuma alteração foi feita na apólice.');
+
+        $apolice->endossar(Destino::Europa, Plano::Plus, Fabrica::vigencia(), Dinheiro::centavos(32_370), StatusApolice::Ativa, [], 'op', $this->agora);
+    }
+
+    public function testEndossoNaoPodeMoverInicioParaOPassado(): void
+    {
+        $apolice = Fabrica::apolice();
+
+        $this->expectExceptionMessage('O início da vigência não pode ser anterior a hoje.');
+
+        $apolice->endossar(Destino::Europa, Plano::Plus, Fabrica::vigencia('2026-09-10', '2026-10-10'), Dinheiro::centavos(32_370), StatusApolice::Ativa, [], 'op', $this->agora);
+    }
+
+    public function testApoliceCanceladaSoPodeSerReativada(): void
+    {
+        $apolice = Fabrica::apolice();
+        $apolice->endossar(Destino::Europa, Plano::Plus, Fabrica::vigencia(), Dinheiro::centavos(32_370), StatusApolice::Cancelada, [], 'op', $this->agora);
+
+        try {
+            $apolice->endossar(Destino::Asia, Plano::Plus, Fabrica::vigencia(), Dinheiro::centavos(32_370), StatusApolice::Cancelada, [], 'op', $this->agora);
+            $this->fail('Apólice cancelada não deveria ser alterada.');
+        } catch (DomainException $e) {
+            $this->assertSame('status', $e->campo);
+        }
+
+        $endosso = $apolice->endossar(Destino::Europa, Plano::Plus, Fabrica::vigencia(), Dinheiro::centavos(32_370), StatusApolice::Ativa, [], 'op', $this->agora);
+        $this->assertSame(['Status: Cancelada → Ativa'], $endosso->alteracoes);
+    }
+
+    public function testExclusaoLogica(): void
+    {
+        $apolice = Fabrica::apolice();
+        $apolice->excluir($this->agora);
+
+        $this->assertEquals($this->agora, $apolice->excluidoEm());
+
+        $this->expectException(DomainException::class);
+        $apolice->excluir($this->agora);
+    }
+
+    public function testVigenciaInvalidaInformaOCampo(): void
+    {
+        try {
+            Fabrica::vigencia('2026-10-10', '2026-10-01');
+            $this->fail('Vigência invertida deveria falhar.');
+        } catch (DomainException $e) {
+            $this->assertSame('fimVigencia', $e->campo);
+        }
+
+        $this->expectExceptionMessage('A vigência máxima é de 365 dias.');
+        Fabrica::vigencia('2026-01-01', '2027-01-01');
     }
 }

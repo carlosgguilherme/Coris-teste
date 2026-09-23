@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http;
 
+use App\Application\Auth\AuthService;
+use App\Application\Auth\NaoAutenticadoException;
 use App\Application\Exception\ValidationException;
 use App\Domain\Exception\DomainException;
 use App\Domain\Exception\NotFoundException;
@@ -14,6 +16,7 @@ final class Kernel
 {
     public function __construct(
         private readonly Router $router,
+        private readonly AuthService $auth,
         private readonly string $origemPermitida = '*',
         private readonly bool $debug = false,
     ) {
@@ -31,11 +34,19 @@ final class Kernel
     private function executar(Request $request): Response
     {
         try {
-            return $this->router->dispatch($request);
+            $rota = $this->router->encontrar($request);
+
+            if (!$rota->publica) {
+                $request = $request->comUsuario($this->auth->autenticar($request->header('Authorization')));
+            }
+
+            return $rota->executar($request);
         } catch (ValidationException $e) {
             return Response::error($e->getMessage(), 422, $e->errors);
         } catch (DomainException $e) {
-            return Response::error($e->getMessage(), 422);
+            return Response::error($e->getMessage(), 422, $e->campo ? [$e->campo => $e->getMessage()] : []);
+        } catch (NaoAutenticadoException $e) {
+            return Response::error($e->getMessage(), 401);
         } catch (NotFoundException $e) {
             return Response::error($e->getMessage(), 404);
         } catch (HttpException $e) {

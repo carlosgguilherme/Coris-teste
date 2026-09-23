@@ -19,5 +19,6 @@
     </source>
     <php>
         <ini name="date.timezone" value="America/Sao_Paulo"/>
+        <env name="JWT_SECRET" value="segredo-de-teste-com-pelo-menos-32-caracteres"/>
     </php>
 </phpunit>

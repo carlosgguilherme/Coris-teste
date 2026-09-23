@@ -7,12 +7,9 @@ namespace Tests\Unit\Application;
 use App\Application\Premio\CalculadoraPremioViagem;
 use App\Domain\Apolice\Destino;
 use App\Domain\Apolice\Plano;
-use App\Domain\Apolice\Segurado;
-use App\Domain\Apolice\Vigencia;
-use App\Domain\Shared\Cpf;
-use DateTimeImmutable;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use Tests\Support\Fabrica;
 
 final class CalculadoraPremioViagemTest extends TestCase
 {
@@ -23,8 +20,8 @@ final class CalculadoraPremioViagemTest extends TestCase
         string $nascimento,
         int $esperadoCentavos,
     ): void {
-        $vigencia = new Vigencia(new DateTimeImmutable('2026-10-01'), new DateTimeImmutable('2026-10-10'));
-        $segurado = new Segurado('Segurado Teste', Cpf::from('52998224725'), 'teste@email.com', new DateTimeImmutable($nascimento));
+        $vigencia = Fabrica::vigencia();
+        $segurado = Fabrica::segurado($nascimento);
 
         $premio = (new CalculadoraPremioViagem())->calcular($plano, $destino, $vigencia, $segurado);
 

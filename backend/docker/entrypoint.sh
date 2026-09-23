@@ -12,4 +12,6 @@ until php bin/migrate.php; do
     sleep 3
 done
 
+php bin/criar-admin.php
+
 exec "$@"

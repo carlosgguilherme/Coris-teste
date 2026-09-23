@@ -8,32 +8,32 @@ use App\Http\Exception\HttpException;
 
 final class Router
 {
-    /** @var array<int, array{method: string, regex: string, handler: callable}> */
+    /** @var array<int, array{method: string, regex: string, handler: callable, publica: bool}> */
     private array $rotas = [];
 
-    public function get(string $caminho, callable $handler): self
+    public function get(string $caminho, callable $handler, bool $publica = false): self
     {
-        return $this->adicionar('GET', $caminho, $handler);
+        return $this->adicionar('GET', $caminho, $handler, $publica);
     }
 
-    public function post(string $caminho, callable $handler): self
+    public function post(string $caminho, callable $handler, bool $publica = false): self
     {
-        return $this->adicionar('POST', $caminho, $handler);
+        return $this->adicionar('POST', $caminho, $handler, $publica);
     }
 
-    public function put(string $caminho, callable $handler): self
+    public function put(string $caminho, callable $handler, bool $publica = false): self
     {
-        return $this->adicionar('PUT', $caminho, $handler);
+        return $this->adicionar('PUT', $caminho, $handler, $publica);
     }
 
-    public function delete(string $caminho, callable $handler): self
+    public function delete(string $caminho, callable $handler, bool $publica = false): self
     {
-        return $this->adicionar('DELETE', $caminho, $handler);
+        return $this->adicionar('DELETE', $caminho, $handler, $publica);
     }
 
-    public function dispatch(Request $request): Response
+    public function encontrar(Request $request): RotaEncontrada
     {
-        $metodosPermitidos = [];
+        $metodoNaoPermitido = false;
 
         foreach ($this->rotas as $rota) {
             if (!preg_match($rota['regex'], $request->path, $matches)) {
@@ -41,7 +41,7 @@ final class Router
             }
 
             if ($rota['method'] !== $request->method) {
-                $metodosPermitidos[] = $rota['method'];
+                $metodoNaoPermitido = true;
                 continue;
             }
 
@@ -50,17 +50,15 @@ final class Router
                 array_filter($matches, 'is_string', ARRAY_FILTER_USE_KEY),
             );
 
-            return ($rota['handler'])($request, ...$parametros);
+            return new RotaEncontrada($rota['handler'], $parametros, $rota['publica']);
         }
 
-        if ($metodosPermitidos !== []) {
-            throw new HttpException(405, 'Método não permitido.');
-        }
-
-        throw new HttpException(404, 'Rota não encontrada.');
+        throw $metodoNaoPermitido
+            ? new HttpException(405, 'Método não permitido.')
+            : new HttpException(404, 'Rota não encontrada.');
     }
 
-    private function adicionar(string $method, string $caminho, callable $handler): self
+    private function adicionar(string $method, string $caminho, callable $handler, bool $publica): self
     {
         $regex = preg_replace('/\{(\w+)\}/', '(?P<$1>\d+)', $caminho);
 
@@ -68,6 +66,7 @@ final class Router
             'method' => $method,
             'regex' => "#^{$regex}$#",
             'handler' => $handler,
+            'publica' => $publica,
         ];
 
         return $this;

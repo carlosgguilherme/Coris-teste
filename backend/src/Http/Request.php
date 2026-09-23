@@ -12,6 +12,7 @@ final class Request
         public readonly array $query = [],
         private readonly string $rawBody = '',
         public readonly array $headers = [],
+        public readonly ?array $usuario = null,
     ) {
     }
 
@@ -24,8 +25,13 @@ final class Request
             path: rtrim($path, '/') ?: '/',
             query: $_GET,
             rawBody: (string) file_get_contents('php://input'),
-            headers: array_change_key_case(getallheaders() ?: [], CASE_LOWER),
+            headers: self::cabecalhos(),
         );
+    }
+
+    public function comUsuario(array $usuario): self
+    {
+        return new self($this->method, $this->path, $this->query, $this->rawBody, $this->headers, $usuario);
     }
 
     /** @throws \JsonException */
@@ -50,5 +56,13 @@ final class Request
     public function header(string $nome): ?string
     {
         return $this->headers[strtolower($nome)] ?? null;
+    }
+
+    private static function cabecalhos(): array
+    {
+        $cabecalhos = array_change_key_case(getallheaders() ?: [], CASE_LOWER);
+        $cabecalhos['authorization'] ??= $_SERVER['HTTP_AUTHORIZATION'] ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? null;
+
+        return array_filter($cabecalhos, fn ($valor) => $valor !== null);
     }
 }

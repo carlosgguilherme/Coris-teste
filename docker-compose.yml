@@ -27,6 +27,10 @@ services:
       DB_PASSWORD: coris123
       CORS_ALLOWED_ORIGIN: "*"
       APP_DEBUG: "false"
+      JWT_SECRET: segredo-local-do-docker-com-mais-de-32-caracteres
+      ADMIN_NOME: Administrador
+      ADMIN_EMAIL: admin@seguroviagem.com
+      ADMIN_SENHA: Admin@123
     ports:
       - "8000:80"
     depends_on:

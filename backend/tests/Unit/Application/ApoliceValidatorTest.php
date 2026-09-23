@@ -48,11 +48,18 @@ final class ApoliceValidatorTest extends TestCase
         $this->assertArrayHasKey('inicioVigencia', $erros);
     }
 
-    public function testRejeitaFimAntesDoInicio(): void
+    public function testRegrasDeVigenciaNaoSaoResponsabilidadeDoValidador(): void
     {
-        $erros = $this->errosPara(['inicioVigencia' => '2026-10-10', 'fimVigencia' => '2026-10-01']);
+        $this->validator->validar([...$this->dadosValidos(), 'inicioVigencia' => '2026-10-10', 'fimVigencia' => '2026-10-01']);
 
-        $this->assertSame(['fimVigencia'], array_keys($erros));
+        $this->addToAssertionCount(1);
+    }
+
+    public function testIgnoraValoresQueNaoSaoTexto(): void
+    {
+        $erros = $this->errosPara(['seguradoNome' => ['array'], 'destino' => null]);
+
+        $this->assertSame(['seguradoNome', 'destino'], array_keys($erros));
     }
 
     public function testRejeitaStatusDesconhecido(): void

@@ -34,4 +34,14 @@ final class Dinheiro
     {
         return $this->centavos > 0;
     }
+
+    public function igual(self $outro): bool
+    {
+        return $this->centavos === $outro->centavos;
+    }
+
+    public function formatado(): string
+    {
+        return 'R$ ' . number_format($this->centavos / 100, 2, ',', '.');
+    }
 }

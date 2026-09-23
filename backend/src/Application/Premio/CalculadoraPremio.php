@@ -6,7 +6,7 @@ namespace App\Application\Premio;
 
 use App\Domain\Apolice\Destino;
 use App\Domain\Apolice\Plano;
-use App\Domain\Apolice\Segurado;
+use App\Domain\Segurado\Segurado;
 use App\Domain\Apolice\Vigencia;
 use App\Domain\Shared\Dinheiro;
 

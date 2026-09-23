@@ -8,10 +8,13 @@ use App\Application\Exception\ValidationException;
 use App\Domain\Apolice\Destino;
 use App\Domain\Apolice\Plano;
 use App\Domain\Apolice\StatusApolice;
-use App\Domain\Apolice\Vigencia;
 use App\Domain\Shared\Cpf;
 use DateTimeImmutable;
 
+/**
+ * Valida apenas formato e presença dos campos. Regras de negócio
+ * (vigência, datas, status) ficam no domínio.
+ */
 final class ApoliceValidator
 {
     private const FORMATO_DATA = 'Y-m-d';
@@ -21,51 +24,35 @@ final class ApoliceValidator
     {
         $erros = [];
 
-        $nome = trim((string) ($dados['seguradoNome'] ?? ''));
+        $nome = trim($this->texto($dados, 'seguradoNome'));
         if (mb_strlen($nome) < 3 || mb_strlen($nome) > 120) {
             $erros['seguradoNome'] = 'Informe o nome completo (3 a 120 caracteres).';
         }
 
-        if (!Cpf::isValid((string) ($dados['seguradoCpf'] ?? ''))) {
+        if (!Cpf::isValid($this->texto($dados, 'seguradoCpf'))) {
             $erros['seguradoCpf'] = 'CPF inválido.';
         }
 
-        if (!filter_var($dados['seguradoEmail'] ?? '', FILTER_VALIDATE_EMAIL)) {
+        if (!filter_var($this->texto($dados, 'seguradoEmail'), FILTER_VALIDATE_EMAIL)) {
             $erros['seguradoEmail'] = 'E-mail inválido.';
         }
 
-        $nascimento = $this->data($dados['seguradoNascimento'] ?? null);
-        if ($nascimento === null) {
-            $erros['seguradoNascimento'] = 'Data de nascimento inválida.';
-        } elseif ($nascimento > new DateTimeImmutable('today')) {
-            $erros['seguradoNascimento'] = 'A data de nascimento não pode ser futura.';
+        foreach (['seguradoNascimento' => 'Data de nascimento inválida.', 'inicioVigencia' => 'Data de início inválida.', 'fimVigencia' => 'Data de fim inválida.'] as $campo => $mensagem) {
+            if ($this->data($this->texto($dados, $campo)) === null) {
+                $erros[$campo] = $mensagem;
+            }
         }
 
-        if (Destino::tryFrom((string) ($dados['destino'] ?? '')) === null) {
+        if (Destino::tryFrom($this->texto($dados, 'destino')) === null) {
             $erros['destino'] = 'Destino inválido.';
         }
 
-        if (Plano::tryFrom((string) ($dados['plano'] ?? '')) === null) {
+        if (Plano::tryFrom($this->texto($dados, 'plano')) === null) {
             $erros['plano'] = 'Plano inválido.';
         }
 
-        if (isset($dados['status']) && StatusApolice::tryFrom((string) $dados['status']) === null) {
+        if (isset($dados['status']) && StatusApolice::tryFrom($this->texto($dados, 'status')) === null) {
             $erros['status'] = 'Status inválido.';
-        }
-
-        $inicio = $this->data($dados['inicioVigencia'] ?? null);
-        $fim = $this->data($dados['fimVigencia'] ?? null);
-
-        if ($inicio === null) {
-            $erros['inicioVigencia'] = 'Data de início inválida.';
-        }
-
-        if ($fim === null) {
-            $erros['fimVigencia'] = 'Data de fim inválida.';
-        } elseif ($inicio !== null && $fim < $inicio) {
-            $erros['fimVigencia'] = 'O fim da vigência deve ser igual ou posterior ao início.';
-        } elseif ($inicio !== null && $inicio->diff($fim)->days + 1 > Vigencia::DIAS_MAXIMOS) {
-            $erros['fimVigencia'] = sprintf('A vigência máxima é de %d dias.', Vigencia::DIAS_MAXIMOS);
         }
 
         if ($erros !== []) {
@@ -73,12 +60,15 @@ final class ApoliceValidator
         }
     }
 
-    private function data(mixed $valor): ?DateTimeImmutable
+    private function texto(array $dados, string $campo): string
     {
-        if (!is_string($valor)) {
-            return null;
-        }
+        $valor = $dados[$campo] ?? '';
 
+        return is_scalar($valor) ? (string) $valor : '';
+    }
+
+    private function data(string $valor): ?DateTimeImmutable
+    {
         $data = DateTimeImmutable::createFromFormat('!' . self::FORMATO_DATA, $valor);
 
         return $data && $data->format(self::FORMATO_DATA) === $valor ? $data : null;

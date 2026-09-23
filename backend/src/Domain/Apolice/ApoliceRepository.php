@@ -4,14 +4,19 @@ declare(strict_types=1);
 
 namespace App\Domain\Apolice;
 
+use App\Domain\Shared\Pagina;
+
 interface ApoliceRepository
 {
-    /** @return Apolice[] */
-    public function listar(?string $busca = null, ?StatusApolice $status = null): array;
+    /** @return Pagina<Apolice> */
+    public function listar(FiltroApolices $filtro): Pagina;
+
+    /** @return array{total: int, ativas: int, premioAtivasCentavos: int} */
+    public function resumo(): array;
 
     public function buscarPorId(int $id): ?Apolice;
 
-    public function salvar(Apolice $apolice): void;
+    public function numeroExiste(string $numero): bool;
 
-    public function excluir(int $id): void;
+    public function salvar(Apolice $apolice): void;
 }

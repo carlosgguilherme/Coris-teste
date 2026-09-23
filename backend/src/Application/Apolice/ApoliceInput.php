@@ -6,7 +6,6 @@ namespace App\Application\Apolice;
 
 use App\Domain\Apolice\Destino;
 use App\Domain\Apolice\Plano;
-use App\Domain\Apolice\Segurado;
 use App\Domain\Apolice\StatusApolice;
 use App\Domain\Apolice\Vigencia;
 use App\Domain\Shared\Cpf;
@@ -15,7 +14,10 @@ use DateTimeImmutable;
 final class ApoliceInput
 {
     private function __construct(
-        public readonly Segurado $segurado,
+        public readonly string $seguradoNome,
+        public readonly Cpf $seguradoCpf,
+        public readonly string $seguradoEmail,
+        public readonly DateTimeImmutable $seguradoNascimento,
         public readonly Destino $destino,
         public readonly Plano $plano,
         public readonly Vigencia $vigencia,
@@ -26,12 +28,10 @@ final class ApoliceInput
     public static function fromArray(array $dados): self
     {
         return new self(
-            segurado: new Segurado(
-                nome: trim((string) $dados['seguradoNome']),
-                cpf: Cpf::from((string) $dados['seguradoCpf']),
-                email: (string) $dados['seguradoEmail'],
-                dataNascimento: new DateTimeImmutable((string) $dados['seguradoNascimento']),
-            ),
+            seguradoNome: (string) $dados['seguradoNome'],
+            seguradoCpf: Cpf::from((string) $dados['seguradoCpf']),
+            seguradoEmail: (string) $dados['seguradoEmail'],
+            seguradoNascimento: new DateTimeImmutable((string) $dados['seguradoNascimento']),
             destino: Destino::from((string) $dados['destino']),
             plano: Plano::from((string) $dados['plano']),
             vigencia: new Vigencia(

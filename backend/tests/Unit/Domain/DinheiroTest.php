@@ -29,6 +29,12 @@ final class DinheiroTest extends TestCase
         Dinheiro::centavos(-1);
     }
 
+    public function testFormataEmReais(): void
+    {
+        $this->assertSame('R$ 1.340,64', Dinheiro::centavos(134_064)->formatado());
+        $this->assertSame('R$ 0,05', Dinheiro::centavos(5)->formatado());
+    }
+
     public function testEhImutavel(): void
     {
         $original = Dinheiro::centavos(1_000);

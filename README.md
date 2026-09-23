@@ -201,6 +201,18 @@ Feito pelo Portal da Azure, no Resource Group `rg-coris-seguros` (Brazil South).
 
 ---
 
+## Documentação técnica
+
+A documentação completa do código, em LaTeX, está em [`docs/latex/documentacao.pdf`](docs/latex/documentacao.pdf) (fonte em `docs/latex/documentacao.tex`). Para gerar o PDF de novo:
+
+```bash
+cd docs/latex
+pdflatex documentacao.tex
+pdflatex documentacao.tex
+```
+
+---
+
 ## Autor do projeto - teste tecnico para CORIS
 
 Carlos Guilherme Fontes Pereira

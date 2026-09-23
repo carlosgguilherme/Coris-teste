@@ -1,0 +1,731 @@
+% Documentação técnica - Seguro Viagem (Gestão de Apólices)
+% Compilar dentro de docs/latex:  pdflatex documentacao.tex  (duas vezes, para o sumário)
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[brazil]{babel}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage[a4paper,margin=2.5cm]{geometry}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage{caption}
+\usepackage[most]{tcolorbox}
+\usepackage{tikz}
+\usetikzlibrary{positioning,arrows.meta,shapes.multipart}
+\usepackage[hidelinks]{hyperref}
+
+% ---------------------------------------------------------------- cores
+\definecolor{azul}{HTML}{0078D4}
+\definecolor{azulclaro}{HTML}{EAF3FB}
+\definecolor{cinza}{HTML}{5B6573}
+\definecolor{fundocod}{HTML}{F6F8FA}
+\definecolor{bordacod}{HTML}{D0D7DE}
+\definecolor{palavra}{HTML}{8250DF}
+\definecolor{texto}{HTML}{0A7D2C}
+\definecolor{comentario}{HTML}{6E7781}
+
+% ---------------------------------------------------------------- aparência
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.6em}
+\setlength{\emergencystretch}{3em}
+\titleformat{\section}{\Large\bfseries\color{azul}}{\thesection}{0.8em}{}
+\titleformat{\subsection}{\large\bfseries}{\thesubsection}{0.8em}{}
+\titleformat{\subsubsection}{\normalsize\bfseries\color{cinza}}{\thesubsubsection}{0.8em}{}
+\setlist{itemsep=0.2em,topsep=0.3em}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\color{cinza}Seguro Viagem -- Gestão de Apólices}
+\fancyhead[R]{\small\color{cinza}Documentação técnica}
+\fancyfoot[C]{\small\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+\newtcolorbox{nota}[1][Nota]{colback=azulclaro,colframe=azul,boxrule=0.6pt,arc=2pt,
+  left=6pt,right=6pt,top=4pt,bottom=4pt,fonttitle=\bfseries\small,title=#1}
+
+\newcommand{\arquivo}[1]{\texttt{\small\detokenize{#1}}}
+\newcommand{\rota}[2]{\texttt{\small\textbf{#1} #2}}
+
+% ---------------------------------------------------------------- código
+\lstdefinelanguage{JavaScript}{
+  keywords={const,let,var,function,return,if,else,export,import,from,default,async,await,
+    new,class,extends,throw,try,catch,finally,true,false,null,undefined,typeof},
+  sensitive=true,
+  comment=[l]{//}, morecomment=[s]{/*}{*/},
+  morestring=[b]', morestring=[b]", morestring=[b]`,
+}
+\lstdefinelanguage{json}{
+  morestring=[b]", stringstyle=\color{texto},
+}
+
+\lstset{
+  basicstyle=\ttfamily\footnotesize,
+  keywordstyle=\color{palavra}\bfseries,
+  stringstyle=\color{texto},
+  commentstyle=\color{comentario}\itshape,
+  numberstyle=\tiny\color{comentario},
+  numbers=left, numbersep=8pt,
+  backgroundcolor=\color{fundocod},
+  frame=single, rulecolor=\color{bordacod}, framesep=4pt,
+  xleftmargin=18pt, xrightmargin=2pt,
+  breaklines=true, breakatwhitespace=true,
+  postbreak=\mbox{\textcolor{comentario}{$\hookrightarrow$}\space},
+  columns=fullflexible, keepspaces=true,
+  showstringspaces=false, tabsize=4,
+  captionpos=t, aboveskip=0.8em, belowskip=0.8em,
+  extendedchars=true, inputencoding=utf8,
+  literate=
+    {á}{{\'a}}1 {é}{{\'e}}1 {í}{{\'i}}1 {ó}{{\'o}}1 {ú}{{\'u}}1
+    {Á}{{\'A}}1 {É}{{\'E}}1 {Í}{{\'I}}1 {Ó}{{\'O}}1 {Ú}{{\'U}}1
+    {à}{{\`a}}1 {â}{{\^a}}1 {ê}{{\^e}}1 {ô}{{\^o}}1
+    {ã}{{\~a}}1 {õ}{{\~o}}1 {Ã}{{\~A}}1 {ç}{{\c{c}}}1 {Ç}{{\c{C}}}1
+    {—}{{---}}1 {…}{{\ldots}}1 {→}{{$\rightarrow$}}1 {×}{{$\times$}}1,
+}
+\lstdefinestyle{php}{language=PHP, morekeywords={enum,match,readonly,fn,case,private,public,protected,static,self,use,namespace,interface,implements,array,string,int,bool,void,mixed}}
+\lstdefinestyle{js}{language=JavaScript}
+\lstdefinestyle{shell}{language=bash, numbers=none}
+
+\newcommand{\codigo}[3][php]{\lstinputlisting[style=#1,caption={\arquivo{#2}}]{../../#3}}
+\renewcommand{\lstlistingname}{Código}
+\renewcommand{\lstlistlistingname}{Lista de códigos}
+
+% ================================================================ documento
+\begin{document}
+
+\begin{titlepage}
+  \centering
+  \vspace*{3cm}
+  {\color{azul}\rule{\linewidth}{1.2pt}}\\[1.2em]
+  {\Huge\bfseries Seguro Viagem\\[0.3em] Gestão de Apólices}\\[1em]
+  {\Large Documentação técnica do código}\\[0.6em]
+  {\color{azul}\rule{\linewidth}{1.2pt}}\\[3em]
+  {\large Laravel 12 \textperiodcentered{} React 18 \textperiodcentered{} MySQL 8 \textperiodcentered{} Microsoft Azure}\\[6em]
+  {\large Carlos Guilherme Fontes Pereira}\\[0.4em]
+  {\color{cinza}Teste técnico -- CORIS}\\[0.4em]
+  {\color{cinza}\today}
+  \vfill
+  {\small\color{cinza}Repositório: \url{https://github.com/carlosgguilherme/coris-teste}}
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+% ================================================================
+\section{Visão geral}
+
+A aplicação é um sistema web para \textbf{gestão de apólices de seguro viagem}. Um operador
+cadastra o segurado, escolhe o destino, o plano e o período da viagem, e o sistema calcula o
+\emph{prêmio} (o valor pago pelo seguro) em tempo real. As apólices podem ser consultadas com
+busca e paginação, editadas (com recálculo do prêmio), canceladas, reativadas e excluídas.
+
+\subsection{Requisitos do teste e onde são atendidos}
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}lX@{}}
+\toprule
+\textbf{Requisito} & \textbf{Onde está no código} \\
+\midrule
+CRUD completo & \arquivo{ApoliceController}, \arquivo{ApoliceService} e as telas em \arquivo{frontend/src/pages} \\
+SOLID e Clean Code & Separação em Form Request, Controller, Service e Calculadora (Seção~\ref{sec:solid}) \\
+Frontend em React & \arquivo{frontend/} (React 18 + Vite + React Router) \\
+Banco relacional & MySQL 8, tabelas \arquivo{segurados} 1:N \arquivo{apolices} (Seção~\ref{sec:dados}) \\
+Desenho na Azure & \arquivo{docs/arquitetura-azure.svg} (Seção~\ref{sec:azure}) \\
+Testes & 25 testes PHPUnit em \arquivo{backend/tests} (Seção~\ref{sec:testes}) \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\subsection{Tecnologias}
+
+\begin{itemize}
+  \item \textbf{Backend:} PHP 8.3 e Laravel 12 (Eloquent, Form Requests, API Resources, SoftDeletes).
+  \item \textbf{Frontend:} React 18, Vite e React Router, sem biblioteca de componentes.
+  \item \textbf{Banco:} MySQL 8 no Docker e na Azure; SQLite para rodar localmente sem instalar banco.
+  \item \textbf{Testes:} PHPUnit (testes de unidade e de API).
+  \item \textbf{Infraestrutura:} Docker Compose (MySQL, API em Apache + PHP e frontend em Nginx) e Microsoft Azure.
+\end{itemize}
+
+\subsection{Estrutura de pastas}
+
+\begin{lstlisting}[style=shell,caption={Organização do repositório (arquivos principais)}]
+backend/
+  app/
+    Enums/                 Plano, Destino, StatusApolice
+    Http/Controllers/Api/  ApoliceController, OpcoesController
+    Http/Requests/         CotacaoRequest, SalvarApoliceRequest
+    Http/Resources/        ApoliceResource (formato do JSON)
+    Models/                Segurado, Apolice
+    Providers/             AppServiceProvider (injeção de dependência)
+    Rules/                 Cpf (validação dos dígitos verificadores)
+    Services/              ApoliceService (regras de negócio)
+    Services/Premio/       CalculadoraPremio (interface) e CalculadoraPremioViagem
+  bootstrap/app.php        tratamento de erros da API
+  database/migrations/     criação das tabelas
+  database/seeders/        dados de exemplo
+  routes/api.php           rotas da API
+  tests/                   Feature (API) e Unit (calculadora e CPF)
+frontend/
+  src/api/                 cliente HTTP e chamadas da API
+  src/components/          formulário, paginação, diálogo, toast...
+  src/hooks/               useApolice, useOpcoes
+  src/pages/               lista, detalhe, cadastro e edição
+  src/utils/format.js      moeda, datas e máscara de CPF
+docs/                      diagrama da Azure e esta documentação
+docker-compose.yml
+\end{lstlisting}
+
+% ================================================================
+\section{Arquitetura}
+
+\subsection{Camadas do backend}
+
+O backend segue uma arquitetura em camadas. Cada camada tem uma única responsabilidade e só
+conhece a camada seguinte:
+
+\begin{center}
+\begin{tikzpicture}[
+  caixa/.style={draw=azul, fill=azulclaro, rounded corners=2pt, minimum width=3.3cm,
+    minimum height=1.05cm, align=center, font=\small},
+  seta/.style={-{Stealth[length=2.2mm]}, thick, color=cinza},
+  node distance=0.55cm]
+  \node[caixa] (rota) {\textbf{Rota}\\\scriptsize routes/api.php};
+  \node[caixa, right=of rota] (req) {\textbf{Form Request}\\\scriptsize valida a entrada};
+  \node[caixa, right=of req] (ctrl) {\textbf{Controller}\\\scriptsize trata o HTTP};
+  \node[caixa, below=1cm of ctrl] (serv) {\textbf{Service}\\\scriptsize regra de negócio};
+  \node[caixa, left=of serv] (calc) {\textbf{Calculadora}\\\scriptsize prêmio};
+  \node[caixa, left=of calc] (model) {\textbf{Model}\\\scriptsize Eloquent / banco};
+  \node[caixa, below=1cm of serv] (res) {\textbf{Resource}\\\scriptsize monta o JSON};
+  \draw[seta] (rota) -- (req);
+  \draw[seta] (req) -- (ctrl);
+  \draw[seta] (ctrl) -- (serv);
+  \draw[seta] (serv) -- (calc);
+  \draw[seta] (serv.south west) to[bend left=12] (model.south);
+  \draw[seta] (serv) -- (res);
+\end{tikzpicture}
+\captionof{figure}{Caminho de uma requisição dentro do backend.}
+\end{center}
+
+\subsection{Fluxo completo: emitir uma apólice}
+
+\begin{enumerate}
+  \item Na tela \arquivo{ApoliceCreate.jsx}, o operador envia o formulário e o front chama
+        \arquivo{apolicesApi.criar(dados)}.
+  \item \arquivo{client.js} faz um \texttt{POST /api/apolices} com o corpo em JSON.
+  \item O Laravel encontra a rota em \arquivo{routes/api.php} e resolve o \arquivo{ApoliceController}.
+  \item Antes de o controller rodar, o \arquivo{SalvarApoliceRequest} valida os campos. Se algo
+        estiver errado, a resposta é \texttt{422} com a mensagem de cada campo, e o controller nem é chamado.
+  \item \arquivo{ApoliceController::store} chama \arquivo{ApoliceService::criar} com os dados já validados.
+  \item O service, dentro de uma transação, salva ou reaproveita o segurado pelo CPF, calcula o prêmio,
+        gera o número da apólice e grava a apólice.
+  \item O \arquivo{ApoliceResource} transforma o model em JSON e a API responde \texttt{201 Created}.
+  \item O front mostra a notificação e abre a tela de detalhe da nova apólice.
+\end{enumerate}
+
+\subsection{Solução na Azure}\label{sec:azure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\linewidth]{arquitetura-azure.pdf}
+\caption{Desenho da solução na Azure (\arquivo{docs/arquitetura-azure.svg}).}
+\end{figure}
+
+\begin{itemize}
+  \item \textbf{Azure Static Web Apps:} hospeda o React já compilado (arquivos estáticos) em CDN, com HTTPS.
+  \item \textbf{Azure App Service (Linux):} executa a API Laravel em PHP 8.3 e permite escalar horizontalmente.
+  \item \textbf{Azure Database for MySQL -- Flexible Server:} banco gerenciado, com backup e conexão TLS.
+  \item \textbf{Azure Key Vault:} guarda a senha do banco e a \texttt{APP\_KEY}. O App Service lê os segredos
+        com \emph{Managed Identity}, então nenhuma senha fica no código.
+  \item \textbf{GitHub Actions:} publica a aplicação a cada \emph{push}.
+\end{itemize}
+
+% ================================================================
+\section{Modelo de dados}\label{sec:dados}
+
+Há duas tabelas. Um \textbf{segurado} pode ter várias \textbf{apólices} (relação 1:N). O segurado
+é identificado pelo CPF, que é único, e é reaproveitado quando a mesma pessoa contrata outro seguro.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+  tabela/.style={rectangle split, rectangle split parts=2, draw=azul, rounded corners=2pt,
+    font=\small, align=left, rectangle split part fill={azul!85,white}},
+  node distance=2.2cm]
+  \node[tabela] (seg) {\textcolor{white}{\textbf{segurados}}
+    \nodepart{two}\ttfamily\footnotesize
+    \begin{tabular}{@{}l@{}}
+      id \hfill PK\\ nome varchar(120)\\ cpf char(11) \hfill UNIQUE\\ email varchar(150)\\
+      data\_nascimento date\\ created\_at, updated\_at
+    \end{tabular}};
+  \node[tabela, right=of seg] (apo) {\textcolor{white}{\textbf{apolices}}
+    \nodepart{two}\ttfamily\footnotesize
+    \begin{tabular}{@{}l@{}}
+      id \hfill PK\\ numero varchar(20) \hfill UNIQUE\\ segurado\_id \hfill FK\\ destino varchar(30)\\
+      plano varchar(20)\\ inicio\_vigencia date\\ fim\_vigencia date\\ valor\_premio\_centavos int\\
+      status varchar(20) \hfill INDEX\\ created\_at, updated\_at\\ deleted\_at \hfill (soft delete)
+    \end{tabular}};
+  \draw[thick, color=cinza] (seg.east) -- node[above, font=\small] {1 \hspace{1.2cm} N} (apo.east -| apo.west);
+\end{tikzpicture}
+\caption{Diagrama entidade-relacionamento.}
+\end{figure}
+
+\begin{nota}[Decisões de modelagem]
+\begin{itemize}[leftmargin=1.2em]
+  \item \textbf{Dinheiro em centavos (inteiro):} \texttt{float} não representa valores decimais com
+        exatidão ($0{,}1 + 0{,}2 \neq 0{,}3$). Em seguros, um centavo de diferença é um erro de negócio.
+  \item \textbf{CPF só com dígitos:} guardado sem máscara (\texttt{char(11)}) e formatado apenas na resposta.
+  \item \textbf{Exclusão lógica:} a coluna \texttt{deleted\_at} marca a apólice como excluída sem apagar o
+        registro. Contratos de seguro precisam ficar guardados para auditoria.
+  \item \textbf{Índice em \texttt{status}:} o filtro por status e o resumo da tela inicial consultam essa coluna.
+\end{itemize}
+\end{nota}
+
+\codigo{database/migrations/..._create_segurados_table.php}{backend/database/migrations/2026_09_23_000001_create_segurados_table.php}
+\codigo{database/migrations/..._create_apolices_table.php}{backend/database/migrations/2026_09_23_000002_create_apolices_table.php}
+
+% ================================================================
+\section{Regras de negócio}
+
+\subsection{Cálculo do prêmio}
+
+O prêmio é calculado pela fórmula:
+
+\[
+  \text{prêmio} = \text{diária do plano} \times \text{dias de viagem}
+  \times \%\,\text{do destino} \times \%\,\text{da idade}
+\]
+
+Os dias contam o início e o fim da viagem (de 01/10 a 10/10 são 10 dias). A idade é calculada na
+data de \textbf{início} da viagem, e não na data do cadastro.
+
+\begin{center}
+\begin{tabular}{@{}lrr@{}}
+\toprule
+\textbf{Plano} & \textbf{Diária} & \textbf{Cobertura médica} \\
+\midrule
+Essencial & R\$ 12,90 & R\$ 30.000 \\
+Plus      & R\$ 24,90 & R\$ 60.000 \\
+Premium   & R\$ 39,90 & R\$ 150.000 \\
+\bottomrule
+\end{tabular}
+\hspace{1cm}
+\begin{tabular}{@{}lr@{}}
+\toprule
+\textbf{Destino} & \textbf{\%} \\
+\midrule
+Nacional & 50\% \\
+América do Sul & 100\% \\
+Europa & 130\% \\
+América do Norte & 140\% \\
+Ásia, África, Oceania & 150\% \\
+\bottomrule
+\end{tabular}
+\hspace{1cm}
+\begin{tabular}{@{}lr@{}}
+\toprule
+\textbf{Idade} & \textbf{\%} \\
+\midrule
+até 59 anos & 100\% \\
+60 a 74 anos & 160\% \\
+75 anos ou mais & 250\% \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{nota}[Exemplo]
+Plano Plus, Europa, 10 dias, segurado com 31 anos:
+$2.490 \times 10 = 24.900$ centavos; $\times\,130\% = 32.370$; $\times\,100\% = 32.370$ centavos,
+ou seja, \textbf{R\$ 323,70}. O mesmo cenário com um segurado de 66 anos fica
+$32.370 \times 160\% = 51.792$ centavos (R\$ 517,92).
+\end{nota}
+
+Cada percentual é aplicado com \texttt{intdiv(centavos * percentual + 50, 100)}: a soma de 50 antes
+da divisão inteira arredonda para o centavo mais próximo, sem passar por \texttt{float}.
+
+\subsection{Outras regras}
+
+\begin{itemize}
+  \item \textbf{CPF} validado pelos dois dígitos verificadores; sequências repetidas (\texttt{111.111.111-11}) são recusadas.
+  \item \textbf{Vigência:} o fim deve ser igual ou posterior ao início, e o período tem no máximo 365 dias.
+  \item \textbf{Início da vigência} não pode ser anterior a hoje. Na edição, a regra só vale se a data de
+        início foi alterada; assim, uma apólice que já está em vigor continua editável.
+  \item \textbf{Segurado reaproveitado:} ao cadastrar um CPF que já existe, os dados do segurado são
+        atualizados e a nova apólice é ligada a ele.
+  \item \textbf{Número da apólice} no formato \texttt{CRS-2026-XXXXXXXX} (ano + 8 caracteres hexadecimais aleatórios).
+  \item \textbf{Apólice cancelada} só pode ser alterada para voltar a ficar ativa.
+  \item \textbf{Exclusão lógica:} a apólice some das consultas, mas continua no banco.
+\end{itemize}
+
+% ================================================================
+\section{Backend: código comentado}
+
+\subsection{Rotas}
+
+As rotas específicas (\texttt{resumo} e \texttt{cotacao}) são declaradas \emph{antes} do
+\texttt{apiResource}. O \texttt{whereNumber('apolice')} garante que \texttt{/apolices/resumo} não seja
+confundido com \texttt{/apolices/\{id\}}.
+
+\codigo{routes/api.php}{backend/routes/api.php}
+
+\subsection{Enums do domínio}
+
+Planos, destinos e status são \emph{enums} do PHP 8.1+. Cada enum guarda o próprio texto de exibição
+e os seus valores de negócio (diária, cobertura, percentual de risco). Para criar um plano novo basta
+adicionar um \texttt{case}; o frontend recebe a lista pela rota \texttt{/api/opcoes} e o exibe sem mudança
+no React.
+
+\codigo{app/Enums/Plano.php}{backend/app/Enums/Plano.php}
+\codigo{app/Enums/Destino.php}{backend/app/Enums/Destino.php}
+\codigo{app/Enums/StatusApolice.php}{backend/app/Enums/StatusApolice.php}
+
+\subsection{Validação: Form Requests e regra de CPF}
+
+A validação fica fora do controller. O \arquivo{CotacaoRequest} tem as regras usadas tanto na
+cotação quanto no cadastro. O \arquivo{SalvarApoliceRequest} \textbf{herda} essas regras e acrescenta o
+\texttt{status} e a verificação do início da vigência. O método \texttt{after()} executa as validações que
+dependem de mais de um campo.
+
+\codigo{app/Http/Requests/CotacaoRequest.php}{backend/app/Http/Requests/CotacaoRequest.php}
+\codigo{app/Http/Requests/SalvarApoliceRequest.php}{backend/app/Http/Requests/SalvarApoliceRequest.php}
+
+A regra \arquivo{Cpf} calcula os dois dígitos verificadores. Para o primeiro dígito, os 9 primeiros
+números são multiplicados pelos pesos 10 a 2; para o segundo, os 10 primeiros pelos pesos 11 a 2.
+O dígito esperado é $(10 \times \text{soma}) \bmod 11$, e o resultado 10 vira 0.
+
+\codigo{app/Rules/Cpf.php}{backend/app/Rules/Cpf.php}
+
+\subsection{Controllers}
+
+O controller só recebe a requisição, chama o service e devolve a resposta com o status HTTP correto.
+Não há regra de negócio nele. Graças ao \emph{route model binding}, o Laravel busca a apólice pelo
+\texttt{id} da URL e devolve 404 quando ela não existe ou foi excluída.
+
+\codigo{app/Http/Controllers/Api/ApoliceController.php}{backend/app/Http/Controllers/Api/ApoliceController.php}
+\codigo{app/Http/Controllers/Api/OpcoesController.php}{backend/app/Http/Controllers/Api/OpcoesController.php}
+
+\subsection{Service: regras de negócio}
+
+O \arquivo{ApoliceService} concentra as regras. Pontos importantes:
+
+\begin{itemize}
+  \item Recebe a \textbf{interface} \texttt{CalculadoraPremio} no construtor, não a classe concreta.
+  \item \texttt{criar} e \texttt{atualizar} rodam em \texttt{DB::transaction}: segurado e apólice são gravados juntos ou nenhum é.
+  \item \texttt{salvarSegurado} usa \texttt{updateOrCreate} pelo CPF, que reaproveita o segurado existente.
+  \item \texttt{gerarNumero} consulta também as apólices excluídas (\texttt{withTrashed}) para nunca repetir um número.
+  \item \texttt{listar} ordena pelas mais recentes e pagina 10 por página.
+\end{itemize}
+
+\codigo{app/Services/ApoliceService.php}{backend/app/Services/ApoliceService.php}
+
+\subsection{Calculadora do prêmio}
+
+A interface tem um único método. A implementação \arquivo{CalculadoraPremioViagem} não acessa o banco
+nem o HTTP: recebe valores e devolve centavos, por isso é fácil de testar.
+
+\codigo{app/Services/Premio/CalculadoraPremio.php}{backend/app/Services/Premio/CalculadoraPremio.php}
+\codigo{app/Services/Premio/CalculadoraPremioViagem.php}{backend/app/Services/Premio/CalculadoraPremioViagem.php}
+
+A ligação entre a interface e a implementação fica no service provider. Para trocar a regra de
+preço, basta alterar essa linha:
+
+\codigo{app/Providers/AppServiceProvider.php}{backend/app/Providers/AppServiceProvider.php}
+
+\subsection{Models}
+
+Os \emph{casts} convertem as colunas automaticamente: \texttt{destino}, \texttt{plano} e \texttt{status}
+viram enums, e as datas viram objetos Carbon. O \emph{scope} \texttt{buscar} procura o termo no número da
+apólice e no nome, e-mail e CPF do segurado; para o CPF, considera só os dígitos, então a busca funciona
+com ou sem máscara.
+
+\codigo{app/Models/Segurado.php}{backend/app/Models/Segurado.php}
+\codigo{app/Models/Apolice.php}{backend/app/Models/Apolice.php}
+
+\subsection{Resource: formato da resposta}
+
+O banco usa nomes em \texttt{snake\_case}; a API responde em \texttt{camelCase}, o padrão do JavaScript.
+O resource faz essa tradução e já envia os textos de exibição (\texttt{planoLabel}, \texttt{statusLabel}...).
+
+\codigo{app/Http/Resources/ApoliceResource.php}{backend/app/Http/Resources/ApoliceResource.php}
+
+\subsection{Tratamento de erros}
+
+Em \arquivo{bootstrap/app.php}, toda rota \texttt{/api/*} responde erros em JSON. O 404 recebe uma
+mensagem em português, diferenciando apólice inexistente de rota inexistente.
+
+\codigo{bootstrap/app.php}{backend/bootstrap/app.php}
+
+% ================================================================
+\section{Referência da API}
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}llX@{}}
+\toprule
+\textbf{Método} & \textbf{Rota} & \textbf{Descrição} \\
+\midrule
+GET    & \texttt{/api/apolices}          & Lista paginada. Parâmetros: \texttt{busca}, \texttt{status}, \texttt{page} \\
+GET    & \texttt{/api/apolices/resumo}   & Totais para os cards da tela inicial \\
+GET    & \texttt{/api/apolices/\{id\}}   & Detalhe de uma apólice \\
+POST   & \texttt{/api/apolices}          & Cadastra (201) \\
+PUT    & \texttt{/api/apolices/\{id\}}   & Edita e recalcula o prêmio \\
+DELETE & \texttt{/api/apolices/\{id\}}   & Exclusão lógica (204) \\
+POST   & \texttt{/api/apolices/cotacao}  & Calcula o prêmio sem salvar \\
+GET    & \texttt{/api/opcoes}            & Planos, destinos e status \\
+GET    & \texttt{/api/health}            & Verificação de saúde \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{center}
+\begin{tabular}{@{}ll@{}}
+\toprule
+\textbf{Status HTTP} & \textbf{Quando} \\
+\midrule
+200 OK & consulta, edição e cotação \\
+201 Created & apólice cadastrada \\
+204 No Content & apólice excluída \\
+404 Not Found & apólice inexistente ou excluída; rota inexistente \\
+422 Unprocessable Content & erro de validação, com a mensagem de cada campo \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{lstlisting}[language=json,numbers=none,caption={Corpo de \texttt{POST /api/apolices}}]
+{
+  "seguradoNome": "Carlos Pereira",
+  "seguradoCpf": "529.982.247-25",
+  "seguradoEmail": "carlos@email.com",
+  "seguradoNascimento": "1995-05-10",
+  "destino": "europa",
+  "plano": "plus",
+  "inicioVigencia": "2026-10-01",
+  "fimVigencia": "2026-10-10"
+}
+\end{lstlisting}
+
+\begin{lstlisting}[language=json,numbers=none,caption={Resposta \texttt{201 Created}}]
+{
+  "id": 1,
+  "numero": "CRS-2026-3B5CE1F5",
+  "seguradoId": 1,
+  "seguradoNome": "Carlos Pereira",
+  "seguradoCpf": "529.982.247-25",
+  "seguradoEmail": "carlos@email.com",
+  "seguradoNascimento": "1995-05-10",
+  "destino": "europa",      "destinoLabel": "Europa",
+  "plano": "plus",          "planoLabel": "Plus",
+  "inicioVigencia": "2026-10-01",
+  "fimVigencia": "2026-10-10",
+  "dias": 10,
+  "valorPremioCentavos": 32370,
+  "status": "ativa",        "statusLabel": "Ativa",
+  "criadoEm": "2026-09-23T13:00:00+00:00",
+  "atualizadoEm": null
+}
+\end{lstlisting}
+
+\begin{lstlisting}[language=json,numbers=none,caption={Resposta \texttt{422} (erro de validação)}]
+{
+  "message": "CPF inválido. (e mais 1 erro)",
+  "errors": {
+    "seguradoCpf": ["CPF inválido."],
+    "plano": ["Plano inválido."]
+  }
+}
+\end{lstlisting}
+
+A listagem segue o formato de paginação do Laravel: os registros ficam em \texttt{data}, e
+\texttt{meta} traz \texttt{current\_page}, \texttt{last\_page}, \texttt{per\_page} e \texttt{total}.
+
+% ================================================================
+\section{Frontend}
+
+\subsection{Telas e rotas}
+
+\begin{center}
+\begin{tabular}{@{}ll@{}}
+\toprule
+\textbf{Rota} & \textbf{Tela} \\
+\midrule
+\texttt{/apolices} & \arquivo{ApoliceList}: cards de resumo, busca, filtro, tabela e paginação \\
+\texttt{/apolices/nova} & \arquivo{ApoliceCreate}: formulário de cadastro \\
+\texttt{/apolices/:id} & \arquivo{ApoliceDetails}: detalhe e exclusão \\
+\texttt{/apolices/:id/editar} & \arquivo{ApoliceEdit}: formulário de edição \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\codigo[js]{frontend/src/App.jsx}{frontend/src/App.jsx}
+
+\subsection{Comunicação com a API}
+
+Toda chamada passa pela função \texttt{request}. Ela define os cabeçalhos, converte o corpo para JSON,
+trata falha de conexão e, em caso de erro, lança um \texttt{ApiError} com a mensagem de cada campo.
+O Laravel envia os erros como lista (\texttt{["CPF inválido."]}), e o formulário mostra a primeira mensagem.
+A URL da API vem de \texttt{VITE\_API\_URL}, o que permite apontar para o App Service na Azure.
+
+\codigo[js]{frontend/src/api/client.js}{frontend/src/api/client.js}
+\codigo[js]{frontend/src/api/apolices.js}{frontend/src/api/apolices.js}
+
+\subsection{Cotação em tempo real}
+
+No formulário, o hook \texttt{useCotacao} chama \texttt{POST /api/apolices/cotacao} quando todos os campos
+estão preenchidos. Ele espera 400\,ms sem digitação (\emph{debounce}) e cancela a requisição anterior com
+\texttt{AbortController}, para que uma resposta antiga não sobrescreva a mais nova. A lista usa a mesma
+técnica na busca, com 300\,ms.
+
+\lstinputlisting[style=js,firstline=175,lastline=203,firstnumber=175,
+  caption={\arquivo{frontend/src/components/ApoliceForm.jsx} (trecho)}]{../../frontend/src/components/ApoliceForm.jsx}
+
+\subsection{Opções e formatação}
+
+\arquivo{useOpcoes} busca planos, destinos e status uma única vez e guarda em cache na memória.
+\arquivo{format.js} converte centavos para reais (\texttt{Intl.NumberFormat}), formata datas e aplica a
+máscara do CPF durante a digitação.
+
+\codigo[js]{frontend/src/hooks/useOpcoes.js}{frontend/src/hooks/useOpcoes.js}
+\codigo[js]{frontend/src/utils/format.js}{frontend/src/utils/format.js}
+
+% ================================================================
+\section{SOLID e Clean Code}\label{sec:solid}
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}lX@{}}
+\toprule
+\textbf{Princípio} & \textbf{Aplicação no projeto} \\
+\midrule
+\textbf{S} -- Responsabilidade única &
+  O Form Request valida, o Controller trata o HTTP, o Service aplica a regra de negócio, a Calculadora
+  só calcula e o Resource só formata a resposta. \\
+\textbf{O} -- Aberto/fechado &
+  Novo plano ou destino é um novo \texttt{case} no enum. Uma nova regra de preço (promoção, por exemplo)
+  é uma nova classe que implementa \texttt{CalculadoraPremio}, sem alterar o Service. \\
+\textbf{L} -- Substituição de Liskov &
+  Qualquer implementação de \texttt{CalculadoraPremio} pode substituir a atual, pois o Service depende
+  apenas do contrato (recebe dados, devolve centavos). \\
+\textbf{I} -- Segregação de interfaces &
+  A interface da calculadora tem um único método, \texttt{calcular}. \\
+\textbf{D} -- Inversão de dependência &
+  O Service depende da abstração; o \texttt{AppServiceProvider} decide qual implementação o container injeta. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\textbf{Clean Code:}
+\begin{itemize}
+  \item Nomes em português, iguais aos termos do negócio (\emph{apólice}, \emph{segurado}, \emph{prêmio}, \emph{vigência}).
+  \item Métodos curtos e com um objetivo: \texttt{salvarSegurado}, \texttt{gerarNumero}, \texttt{dadosDaApolice}.
+  \item Sem números mágicos: valores de negócio ficam nos enums e em constantes
+        (\texttt{VIGENCIA\_MAXIMA\_DIAS}, \texttt{POR\_PAGINA}).
+  \item Regras que dependem de várias colunas (como o status cancelado) ficam no Service, e não espalhadas pelo front.
+\end{itemize}
+
+% ================================================================
+\section{Testes automatizados}\label{sec:testes}
+
+São 25 testes com 61 verificações, todos passando.
+
+\subsection{Testes de unidade}
+
+\begin{itemize}
+  \item \arquivo{CalculadoraPremioViagemTest}: 5 cenários combinando plano, destino e faixa etária, com o valor
+        esperado em centavos. Usa \texttt{DataProvider}, então cada cenário aparece como um teste separado.
+  \item \arquivo{CpfTest}: CPFs válidos com e sem máscara; CPFs vazios, repetidos, com dígito errado ou incompletos.
+\end{itemize}
+
+\codigo{tests/Unit/CalculadoraPremioViagemTest.php}{backend/tests/Unit/CalculadoraPremioViagemTest.php}
+
+\subsection{Testes da API}
+
+\arquivo{ApoliceApiTest} faz requisições HTTP reais contra a aplicação, com o banco recriado a cada teste
+(\texttt{RefreshDatabase}) e a data fixada em 20/09/2026 (\texttt{Carbon::setTestNow}), para que os
+resultados não dependam do dia em que o teste roda.
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}lX@{}}
+\toprule
+\textbf{Teste} & \textbf{O que garante} \\
+\midrule
+\texttt{cria\_apolice\_calculando\_o\_premio} & 201, prêmio correto, número no formato, CPF salvo sem máscara \\
+\texttt{reaproveita\_o\_segurado\_pelo\_cpf} & duas apólices do mesmo CPF usam um único segurado \\
+\texttt{lista\_com\_paginacao\_busca\_e\_filtro} & paginação, busca por CPF e nome, filtro por status \\
+\texttt{edita\_e\_recalcula\_o\_premio} & troca de plano atualiza o prêmio \\
+\texttt{apolice\_cancelada\_so\_pode\_ser\_reativada} & 422 ao alterar cancelada; reativação permitida \\
+\texttt{exclusao\_logica} & 204, depois 404, e o registro continua no banco \\
+\texttt{valida\_os\_campos\_em\_portugues} & mensagens de CPF e plano inválidos \\
+\texttt{vigencia\_nao\_pode\_comecar\_no\_passado...} & início no passado, mais de 365 dias, fim antes do início \\
+\texttt{apolice\_ja\_em\_vigor\_pode\_ser\_editada...} & edição sem mudar o início, mesmo após a data de hoje \\
+\texttt{cotacao\_nao\_persiste} & a cotação calcula e não grava nada \\
+\texttt{resumo\_ignora\_canceladas\_e\_excluidas} & totais corretos nos cards \\
+\texttt{opcoes\_e\_health} & rotas auxiliares \\
+\texttt{rota\_inexistente} & 404 com mensagem em português \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{lstlisting}[style=shell,caption={Rodando os testes}]
+cd backend
+php artisan test
+\end{lstlisting}
+
+% ================================================================
+\section{Execução}
+
+\subsection{Docker (modo principal)}
+
+\begin{lstlisting}[style=shell,caption={Subindo a aplicação}]
+docker compose up -d --build                  # MySQL, API e frontend
+docker compose exec api php artisan db:seed   # dados de exemplo (opcional)
+\end{lstlisting}
+
+A aplicação fica em \url{http://localhost:3000} e a API em \url{http://localhost:8000/api}. Ao subir, o
+container da API aguarda o MySQL e executa as migrations.
+
+\subsection{Sem Docker}
+
+Localmente a API usa SQLite, então não é preciso instalar MySQL.
+
+\begin{lstlisting}[style=shell,caption={Execução local}]
+cd backend
+composer install
+cp .env.example .env
+php artisan key:generate
+php artisan migrate --seed
+php artisan serve
+
+cd frontend          # em outro terminal
+npm install
+npm run dev          # http://localhost:5173
+\end{lstlisting}
+
+\subsection{Publicação na Azure}
+
+\begin{enumerate}
+  \item Criar o \textbf{Azure Database for MySQL -- Flexible Server} e o banco \texttt{coris\_seguros}.
+  \item Criar o \textbf{App Service} (Linux, PHP 8.3), configurar as variáveis de ambiente (\texttt{APP\_KEY},
+        \texttt{DB\_*}, \texttt{MYSQL\_ATTR\_SSL\_CA}) e o comando de inicialização
+        \texttt{bash /home/site/wwwroot/azure/startup.sh}, que aponta o nginx para a pasta \texttt{public} e roda as migrations.
+  \item Opcionalmente, guardar a senha do banco no \textbf{Key Vault} e referenciá-la nas variáveis do App Service.
+  \item Criar o \textbf{Static Web App} apontando para a pasta \texttt{frontend}, com \texttt{VITE\_API\_URL}
+        igual à URL do App Service seguida de \texttt{/api}.
+\end{enumerate}
+
+% ================================================================
+\section{Próximos passos}
+
+\begin{itemize}
+  \item Autenticação de usuários com Laravel Sanctum e perfis de acesso (operador e gestor), já que os
+        dados dos segurados são pessoais (LGPD).
+  \item Endosso: histórico de cada alteração feita em uma apólice emitida.
+  \item Infraestrutura como código (Bicep) para criar os recursos da Azure.
+  \item Testes no frontend.
+  \item Pipeline de CI rodando os testes antes do deploy.
+\end{itemize}
+
+\end{document}

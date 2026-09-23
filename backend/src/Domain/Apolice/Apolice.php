@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Apolice;
 
 use App\Domain\Exception\DomainException;
+use App\Domain\Shared\Dinheiro;
 use DateTimeImmutable;
 
 class Apolice
@@ -16,7 +17,7 @@ class Apolice
         private Destino $destino,
         private Plano $plano,
         private Vigencia $vigencia,
-        private float $valorPremio,
+        private Dinheiro $valorPremio,
         private StatusApolice $status,
         private DateTimeImmutable $criadoEm,
         private ?DateTimeImmutable $atualizadoEm = null,
@@ -30,7 +31,7 @@ class Apolice
         Destino $destino,
         Plano $plano,
         Vigencia $vigencia,
-        float $valorPremio,
+        Dinheiro $valorPremio,
     ): self {
         return new self(
             id: null,
@@ -52,7 +53,7 @@ class Apolice
         Destino $destino,
         Plano $plano,
         Vigencia $vigencia,
-        float $valorPremio,
+        Dinheiro $valorPremio,
         StatusApolice $status,
         DateTimeImmutable $criadoEm,
         ?DateTimeImmutable $atualizadoEm,
@@ -65,7 +66,7 @@ class Apolice
         Destino $destino,
         Plano $plano,
         Vigencia $vigencia,
-        float $valorPremio,
+        Dinheiro $valorPremio,
         StatusApolice $status,
     ): void {
         if ($this->status === StatusApolice::Cancelada && $status === StatusApolice::Cancelada) {
@@ -122,7 +123,7 @@ class Apolice
         return $this->vigencia;
     }
 
-    public function valorPremio(): float
+    public function valorPremio(): Dinheiro
     {
         return $this->valorPremio;
     }
@@ -142,9 +143,9 @@ class Apolice
         return $this->atualizadoEm;
     }
 
-    private static function garantirPremioValido(float $valorPremio): void
+    private static function garantirPremioValido(Dinheiro $valorPremio): void
     {
-        if ($valorPremio <= 0) {
+        if (!$valorPremio->ehPositivo()) {
             throw new DomainException('O valor do prêmio deve ser maior que zero.');
         }
     }

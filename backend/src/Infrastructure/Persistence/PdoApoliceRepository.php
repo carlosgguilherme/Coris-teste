@@ -12,6 +12,7 @@ use App\Domain\Apolice\Segurado;
 use App\Domain\Apolice\StatusApolice;
 use App\Domain\Apolice\Vigencia;
 use App\Domain\Shared\Cpf;
+use App\Domain\Shared\Dinheiro;
 use DateTimeImmutable;
 use PDO;
 
@@ -79,9 +80,9 @@ final class PdoApoliceRepository implements ApoliceRepository
     {
         $stmt = $this->pdo->prepare(
             'INSERT INTO apolices (numero, segurado_nome, segurado_cpf, segurado_email, segurado_nascimento,
-                destino, plano, inicio_vigencia, fim_vigencia, valor_premio, status, criado_em, atualizado_em)
+                destino, plano, inicio_vigencia, fim_vigencia, valor_premio_centavos, status, criado_em, atualizado_em)
              VALUES (:numero, :segurado_nome, :segurado_cpf, :segurado_email, :segurado_nascimento,
-                :destino, :plano, :inicio_vigencia, :fim_vigencia, :valor_premio, :status, :criado_em, :atualizado_em)'
+                :destino, :plano, :inicio_vigencia, :fim_vigencia, :valor_premio_centavos, :status, :criado_em, :atualizado_em)'
         );
 
         $stmt->execute($this->extrair($apolice));
@@ -101,7 +102,7 @@ final class PdoApoliceRepository implements ApoliceRepository
                 plano = :plano,
                 inicio_vigencia = :inicio_vigencia,
                 fim_vigencia = :fim_vigencia,
-                valor_premio = :valor_premio,
+                valor_premio_centavos = :valor_premio_centavos,
                 status = :status,
                 criado_em = :criado_em,
                 atualizado_em = :atualizado_em
@@ -125,7 +126,7 @@ final class PdoApoliceRepository implements ApoliceRepository
             'plano' => $apolice->plano()->value,
             'inicio_vigencia' => $apolice->vigencia()->inicio->format(self::FORMATO_DATA),
             'fim_vigencia' => $apolice->vigencia()->fim->format(self::FORMATO_DATA),
-            'valor_premio' => number_format($apolice->valorPremio(), 2, '.', ''),
+            'valor_premio_centavos' => $apolice->valorPremio()->centavos,
             'status' => $apolice->status()->value,
             'criado_em' => $apolice->criadoEm()->format(self::FORMATO_DATA_HORA),
             'atualizado_em' => $apolice->atualizadoEm()?->format(self::FORMATO_DATA_HORA),
@@ -149,7 +150,7 @@ final class PdoApoliceRepository implements ApoliceRepository
                 new DateTimeImmutable($linha['inicio_vigencia']),
                 new DateTimeImmutable($linha['fim_vigencia']),
             ),
-            valorPremio: (float) $linha['valor_premio'],
+            valorPremio: Dinheiro::centavos((int) $linha['valor_premio_centavos']),
             status: StatusApolice::from($linha['status']),
             criadoEm: new DateTimeImmutable($linha['criado_em']),
             atualizadoEm: $linha['atualizado_em'] ? new DateTimeImmutable($linha['atualizado_em']) : null,

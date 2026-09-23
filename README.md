@@ -41,7 +41,7 @@ A dependência sempre aponta para o **domínio**. O domínio não conhece banco,
 
 | Pasta | Responsabilidade |
 |---|---|
-| `src/Domain` | Regras de negócio: entidade `Apolice`, value objects (`Cpf`, `Vigencia`, `Segurado`), enums e o contrato `ApoliceRepository` |
+| `src/Domain` | Regras de negócio: entidade `Apolice`, value objects (`Cpf`, `Dinheiro`, `Vigencia`, `Segurado`), enums e o contrato `ApoliceRepository` |
 | `src/Application` | Casos de uso (`ApoliceService`), validação de entrada e cálculo do prêmio |
 | `src/Infrastructure` | Implementação com PDO (MySQL/SQLite), conexão, migrations e leitura do `.env` |
 | `src/Http` | Roteamento, controllers, formatação da resposta JSON e tratamento centralizado de erros |
@@ -65,7 +65,8 @@ A dependência sempre aponta para o **domínio**. O domínio não conhece banco,
 - A vigência não pode terminar antes de começar e tem no máximo 365 dias.
 - O número da apólice é gerado automaticamente (`CRS-2026-XXXXXXXX`).
 - Uma apólice cancelada só pode ser alterada para ser reativada.
-- **Prêmio** = `diária do plano × dias × fator do destino × fator de idade`
+- **Prêmio** = `diária do plano × dias × % do destino × % de idade`
+- Valores monetários são tratados em **centavos (inteiro)** pelo value object `Dinheiro`, no código, no banco e na API. Nenhum cálculo usa `float`, então não há erro de arredondamento. O arredondamento é *half up*, aplicado a cada percentual.
 
 | Plano | Diária | Cobertura médica |
 |---|---|---|
@@ -73,8 +74,8 @@ A dependência sempre aponta para o **domínio**. O domínio não conhece banco,
 | Plus | R$ 24,90 | R$ 60.000 |
 | Premium | R$ 39,90 | R$ 150.000 |
 
-Fator do destino: Nacional 0,5 · América do Sul 1,0 · Europa 1,3 · América do Norte 1,4 · Ásia/África/Oceania 1,5
-Fator de idade: até 59 anos 1,0 · 60 a 74 anos 1,6 · 75+ anos 2,5
+Destino: Nacional 50% · América do Sul 100% · Europa 130% · América do Norte 140% · Ásia/África/Oceania 150%
+Idade: até 59 anos 100% · 60 a 74 anos 160% · 75+ anos 250%
 
 ---
 
@@ -90,6 +91,8 @@ Fator de idade: até 59 anos 1,0 · 60 a 74 anos 1,6 · 75+ anos 2,5
 | POST | `/api/apolices/cotacao` | Simula o prêmio sem salvar |
 | GET | `/api/opcoes` | Planos, destinos e status disponíveis |
 | GET | `/api/health` | Health check |
+
+Valores monetários trafegam em centavos (`valorPremioCentavos: 32370` = R$ 323,70).
 
 Erros seguem um formato único: `422` para validação (com erro por campo), `404` para não encontrado e `400` para JSON inválido.
 

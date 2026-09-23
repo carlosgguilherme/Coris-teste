@@ -27,7 +27,7 @@ final class ApoliceResource
             'inicioVigencia' => $vigencia->inicio->format('Y-m-d'),
             'fimVigencia' => $vigencia->fim->format('Y-m-d'),
             'dias' => $vigencia->dias(),
-            'valorPremio' => $apolice->valorPremio(),
+            'valorPremioCentavos' => $apolice->valorPremio()->centavos,
             'status' => $apolice->status()->value,
             'statusLabel' => $apolice->status()->label(),
             'criadoEm' => $apolice->criadoEm()->format(DATE_ATOM),

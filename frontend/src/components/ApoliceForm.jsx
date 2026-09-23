@@ -97,7 +97,7 @@ export default function ApoliceForm({ inicial, edicao = false, textoBotao, onSub
                 <option value="">Selecione...</option>
                 {opcoes?.planos.map((plano) => (
                   <option key={plano.valor} value={plano.valor}>
-                    {plano.label} — {formatarMoeda(plano.valorDiaria)}/dia
+                    {plano.label} — {formatarMoeda(plano.valorDiariaCentavos)}/dia
                   </option>
                 ))}
               </select>
@@ -125,7 +125,7 @@ export default function ApoliceForm({ inicial, edicao = false, textoBotao, onSub
         <h2>Prêmio estimado</h2>
         {cotacao ? (
           <>
-            <p className="resumo__valor">{formatarMoeda(cotacao.valorPremio)}</p>
+            <p className="resumo__valor">{formatarMoeda(cotacao.valorPremioCentavos)}</p>
             <p className="muted">{cotacao.dias} {cotacao.dias === 1 ? 'dia' : 'dias'} de cobertura</p>
           </>
         ) : (
@@ -162,7 +162,7 @@ function PlanoSelecionado({ opcoes, plano }) {
   return (
     <dl className="resumo__plano">
       <dt>Plano {selecionado.label}</dt>
-      <dd>Cobertura médica de até {formatarMoeda(selecionado.coberturaMedica)}</dd>
+      <dd>Cobertura médica de até {formatarMoeda(selecionado.coberturaMedicaCentavos)}</dd>
     </dl>
   );
 }

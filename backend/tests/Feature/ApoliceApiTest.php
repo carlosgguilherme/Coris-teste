@@ -30,7 +30,7 @@ final class ApoliceApiTest extends TestCase
         $this->assertSame(201, $criada->status);
         $id = $criada->body['id'];
         $this->assertMatchesRegularExpression('/^CRS-\d{4}-[A-F0-9]{8}$/', $criada->body['numero']);
-        $this->assertSame(323.7, $criada->body['valorPremio']);
+        $this->assertSame(32_370, $criada->body['valorPremioCentavos']);
         $this->assertSame('ativa', $criada->body['status']);
 
         $lista = $this->request('GET', '/api/apolices');
@@ -39,7 +39,7 @@ final class ApoliceApiTest extends TestCase
         $atualizada = $this->request('PUT', "/api/apolices/{$id}", [...$this->payload(), 'plano' => 'premium']);
         $this->assertSame(200, $atualizada->status);
         $this->assertSame('premium', $atualizada->body['plano']);
-        $this->assertSame(518.7, $atualizada->body['valorPremio']);
+        $this->assertSame(51_870, $atualizada->body['valorPremioCentavos']);
         $this->assertNotNull($atualizada->body['atualizadoEm']);
 
         $this->assertSame(204, $this->request('DELETE', "/api/apolices/{$id}")->status);
@@ -79,7 +79,7 @@ final class ApoliceApiTest extends TestCase
     {
         $cotacao = $this->request('POST', '/api/apolices/cotacao', $this->payload());
 
-        $this->assertSame(['valorPremio' => 323.7, 'dias' => 10], $cotacao->body);
+        $this->assertSame(['valorPremioCentavos' => 32_370, 'dias' => 10], $cotacao->body);
         $this->assertCount(0, $this->request('GET', '/api/apolices')->body);
     }
 

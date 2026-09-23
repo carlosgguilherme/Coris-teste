@@ -9,6 +9,7 @@ use App\Domain\Apolice\Apolice;
 use App\Domain\Apolice\ApoliceRepository;
 use App\Domain\Apolice\StatusApolice;
 use App\Domain\Exception\NotFoundException;
+use App\Domain\Shared\Dinheiro;
 
 final class ApoliceService
 {
@@ -77,13 +78,13 @@ final class ApoliceService
         $this->repository->excluir($id);
     }
 
-    /** @return array{valorPremio: float, dias: int} */
+    /** @return array{valorPremioCentavos: int, dias: int} */
     public function cotar(array $dados): array
     {
         $input = $this->input($dados);
 
         return [
-            'valorPremio' => $this->premio($input),
+            'valorPremioCentavos' => $this->premio($input)->centavos,
             'dias' => $input->vigencia->dias(),
         ];
     }
@@ -95,7 +96,7 @@ final class ApoliceService
         return ApoliceInput::fromArray($dados);
     }
 
-    private function premio(ApoliceInput $input): float
+    private function premio(ApoliceInput $input): Dinheiro
     {
         return $this->calculadora->calcular($input->plano, $input->destino, $input->vigencia, $input->segurado);
     }

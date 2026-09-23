@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS apolices (
     plano VARCHAR(20) NOT NULL,
     inicio_vigencia DATE NOT NULL,
     fim_vigencia DATE NOT NULL,
-    valor_premio DECIMAL(10, 2) NOT NULL,
+    valor_premio_centavos INTEGER NOT NULL,
     status VARCHAR(20) NOT NULL DEFAULT 'ativa',
     criado_em DATETIME NOT NULL,
     atualizado_em DATETIME NULL

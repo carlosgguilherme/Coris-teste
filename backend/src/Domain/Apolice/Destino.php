@@ -27,14 +27,14 @@ enum Destino: string
         };
     }
 
-    public function fatorRisco(): float
+    public function percentualRisco(): int
     {
         return match ($this) {
-            self::Nacional => 0.5,
-            self::AmericaDoSul => 1.0,
-            self::Europa => 1.3,
-            self::AmericaDoNorte => 1.4,
-            self::Asia, self::Africa, self::Oceania => 1.5,
+            self::Nacional => 50,
+            self::AmericaDoSul => 100,
+            self::Europa => 130,
+            self::AmericaDoNorte => 140,
+            self::Asia, self::Africa, self::Oceania => 150,
         };
     }
 }

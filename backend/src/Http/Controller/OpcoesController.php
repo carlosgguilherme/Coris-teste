@@ -17,8 +17,8 @@ final class OpcoesController
             'planos' => array_map(fn (Plano $plano) => [
                 'valor' => $plano->value,
                 'label' => $plano->label(),
-                'valorDiaria' => $plano->valorDiaria(),
-                'coberturaMedica' => $plano->coberturaMedica(),
+                'valorDiariaCentavos' => $plano->valorDiaria()->centavos,
+                'coberturaMedicaCentavos' => $plano->coberturaMedica()->centavos,
             ], Plano::cases()),
             'destinos' => array_map(fn (Destino $destino) => [
                 'valor' => $destino->value,

@@ -55,7 +55,7 @@ export default function ApoliceList() {
 
   const totalPremios = apolices
     .filter((apolice) => apolice.status === 'ativa')
-    .reduce((total, apolice) => total + apolice.valorPremio, 0);
+    .reduce((total, apolice) => total + apolice.valorPremioCentavos, 0);
 
   return (
     <>
@@ -133,7 +133,7 @@ export default function ApoliceList() {
                     {formatarData(apolice.inicioVigencia)} a {formatarData(apolice.fimVigencia)}
                     <small className="muted block">{apolice.dias} dias</small>
                   </td>
-                  <td className="num">{formatarMoeda(apolice.valorPremio)}</td>
+                  <td className="num">{formatarMoeda(apolice.valorPremioCentavos)}</td>
                   <td><StatusBadge status={apolice.status} label={apolice.statusLabel} /></td>
                   <td onClick={(e) => e.stopPropagation()}>
                     <div className="acoes">

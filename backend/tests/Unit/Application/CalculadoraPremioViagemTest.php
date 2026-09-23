@@ -21,24 +21,24 @@ final class CalculadoraPremioViagemTest extends TestCase
         Plano $plano,
         Destino $destino,
         string $nascimento,
-        float $esperado,
+        int $esperadoCentavos,
     ): void {
         $vigencia = new Vigencia(new DateTimeImmutable('2026-10-01'), new DateTimeImmutable('2026-10-10'));
         $segurado = new Segurado('Segurado Teste', Cpf::from('52998224725'), 'teste@email.com', new DateTimeImmutable($nascimento));
 
         $premio = (new CalculadoraPremioViagem())->calcular($plano, $destino, $vigencia, $segurado);
 
-        $this->assertSame($esperado, $premio);
+        $this->assertSame($esperadoCentavos, $premio->centavos);
     }
 
     public static function cenarios(): array
     {
         return [
-            'essencial, américa do sul, adulto' => [Plano::Essencial, Destino::AmericaDoSul, '1990-01-01', 129.0],
-            'plus, europa, adulto' => [Plano::Plus, Destino::Europa, '1990-01-01', 323.7],
-            'premium, nacional, adulto' => [Plano::Premium, Destino::Nacional, '1990-01-01', 199.5],
-            'plus, europa, 60+ anos' => [Plano::Plus, Destino::Europa, '1960-01-01', 517.92],
-            'essencial, américa do sul, 75+ anos' => [Plano::Essencial, Destino::AmericaDoSul, '1945-01-01', 322.5],
+            'essencial, américa do sul, adulto' => [Plano::Essencial, Destino::AmericaDoSul, '1990-01-01', 12_900],
+            'plus, europa, adulto' => [Plano::Plus, Destino::Europa, '1990-01-01', 32_370],
+            'premium, nacional, adulto' => [Plano::Premium, Destino::Nacional, '1990-01-01', 19_950],
+            'plus, europa, 60+ anos' => [Plano::Plus, Destino::Europa, '1960-01-01', 51_792],
+            'essencial, américa do sul, 75+ anos' => [Plano::Essencial, Destino::AmericaDoSul, '1945-01-01', 32_250],
         ];
     }
 }

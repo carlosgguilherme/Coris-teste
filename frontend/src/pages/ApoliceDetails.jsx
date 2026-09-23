@@ -75,7 +75,7 @@ export default function ApoliceDetails() {
 
         <section className="card resumo">
           <h2>Prêmio</h2>
-          <p className="resumo__valor">{formatarMoeda(apolice.valorPremio)}</p>
+          <p className="resumo__valor">{formatarMoeda(apolice.valorPremioCentavos)}</p>
           <dl className="lista-dados">
             <Item label="Emitida em" valor={formatarDataHora(apolice.criadoEm)} />
             <Item label="Última alteração" valor={formatarDataHora(apolice.atualizadoEm)} />

@@ -12,6 +12,7 @@ use App\Domain\Apolice\StatusApolice;
 use App\Domain\Apolice\Vigencia;
 use App\Domain\Exception\DomainException;
 use App\Domain\Shared\Cpf;
+use App\Domain\Shared\Dinheiro;
 use DateTimeImmutable;
 use PHPUnit\Framework\TestCase;
 
@@ -30,7 +31,7 @@ final class ApoliceTest extends TestCase
     {
         $this->expectException(DomainException::class);
 
-        $this->emitir(premio: 0);
+        $this->emitir(premioCentavos: 0);
     }
 
     public function testVigenciaContaOsDiasInclusive(): void
@@ -57,14 +58,14 @@ final class ApoliceTest extends TestCase
     public function testApoliceCanceladaSoPodeSerAlteradaParaReativar(): void
     {
         $apolice = $this->emitir();
-        $apolice->atualizar($apolice->segurado(), Destino::Europa, Plano::Plus, $apolice->vigencia(), 100, StatusApolice::Cancelada);
+        $apolice->atualizar($apolice->segurado(), Destino::Europa, Plano::Plus, $apolice->vigencia(), Dinheiro::centavos(10_000), StatusApolice::Cancelada);
 
-        $apolice->atualizar($apolice->segurado(), Destino::Europa, Plano::Plus, $apolice->vigencia(), 100, StatusApolice::Ativa);
+        $apolice->atualizar($apolice->segurado(), Destino::Europa, Plano::Plus, $apolice->vigencia(), Dinheiro::centavos(10_000), StatusApolice::Ativa);
         $this->assertSame(StatusApolice::Ativa, $apolice->status());
 
-        $apolice->atualizar($apolice->segurado(), Destino::Europa, Plano::Plus, $apolice->vigencia(), 100, StatusApolice::Cancelada);
+        $apolice->atualizar($apolice->segurado(), Destino::Europa, Plano::Plus, $apolice->vigencia(), Dinheiro::centavos(10_000), StatusApolice::Cancelada);
         $this->expectException(DomainException::class);
-        $apolice->atualizar($apolice->segurado(), Destino::Asia, Plano::Plus, $apolice->vigencia(), 100, StatusApolice::Cancelada);
+        $apolice->atualizar($apolice->segurado(), Destino::Asia, Plano::Plus, $apolice->vigencia(), Dinheiro::centavos(10_000), StatusApolice::Cancelada);
     }
 
     public function testIdSoPodeSerDefinidoUmaVez(): void
@@ -76,7 +77,7 @@ final class ApoliceTest extends TestCase
         $apolice->definirId(11);
     }
 
-    private function emitir(float $premio = 150.0): Apolice
+    private function emitir(int $premioCentavos = 15_000): Apolice
     {
         return Apolice::emitir(
             'CRS-2026-TESTE',
@@ -84,7 +85,7 @@ final class ApoliceTest extends TestCase
             Destino::Europa,
             Plano::Plus,
             new Vigencia(new DateTimeImmutable('2026-10-01'), new DateTimeImmutable('2026-10-10')),
-            $premio,
+            Dinheiro::centavos($premioCentavos),
         );
     }
 }

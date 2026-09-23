@@ -8,27 +8,26 @@ use App\Domain\Apolice\Destino;
 use App\Domain\Apolice\Plano;
 use App\Domain\Apolice\Segurado;
 use App\Domain\Apolice\Vigencia;
+use App\Domain\Shared\Dinheiro;
 
 final class CalculadoraPremioViagem implements CalculadoraPremio
 {
-    public function calcular(Plano $plano, Destino $destino, Vigencia $vigencia, Segurado $segurado): float
+    public function calcular(Plano $plano, Destino $destino, Vigencia $vigencia, Segurado $segurado): Dinheiro
     {
         $idade = $segurado->idadeEm($vigencia->inicio);
 
-        $premio = $plano->valorDiaria()
-            * $vigencia->dias()
-            * $destino->fatorRisco()
-            * $this->fatorIdade($idade);
-
-        return round($premio, 2);
+        return $plano->valorDiaria()
+            ->multiplicar($vigencia->dias())
+            ->aplicarPercentual($destino->percentualRisco())
+            ->aplicarPercentual($this->percentualIdade($idade));
     }
 
-    private function fatorIdade(int $idade): float
+    private function percentualIdade(int $idade): int
     {
         return match (true) {
-            $idade >= 75 => 2.5,
-            $idade >= 60 => 1.6,
-            default => 1.0,
+            $idade >= 75 => 250,
+            $idade >= 60 => 160,
+            default => 100,
         };
     }
 }

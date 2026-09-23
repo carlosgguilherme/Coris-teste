@@ -1,6 +1,6 @@
 const moeda = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 
-export const formatarMoeda = (valor) => moeda.format(valor ?? 0);
+export const formatarMoeda = (centavos) => moeda.format((centavos ?? 0) / 100);
 
 export function formatarData(isoDate) {
   if (!isoDate) return '—';

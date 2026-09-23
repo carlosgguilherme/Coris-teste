@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Domain\Apolice;
 
+use App\Domain\Shared\Dinheiro;
+
 enum Plano: string
 {
     case Essencial = 'essencial';
@@ -19,21 +21,21 @@ enum Plano: string
         };
     }
 
-    public function valorDiaria(): float
+    public function valorDiaria(): Dinheiro
     {
-        return match ($this) {
-            self::Essencial => 12.90,
-            self::Plus => 24.90,
-            self::Premium => 39.90,
-        };
+        return Dinheiro::centavos(match ($this) {
+            self::Essencial => 1_290,
+            self::Plus => 2_490,
+            self::Premium => 3_990,
+        });
     }
 
-    public function coberturaMedica(): int
+    public function coberturaMedica(): Dinheiro
     {
-        return match ($this) {
-            self::Essencial => 30_000,
-            self::Plus => 60_000,
-            self::Premium => 150_000,
-        };
+        return Dinheiro::centavos(match ($this) {
+            self::Essencial => 3_000_000,
+            self::Plus => 6_000_000,
+            self::Premium => 15_000_000,
+        });
     }
 }

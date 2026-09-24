@@ -698,8 +698,7 @@ legend {
   margin-left: auto;
 }
 
-.grafico-dica__cor,
-.legenda__cor {
+.grafico-dica__cor {
   width: 10px;
   height: 10px;
   border-radius: 3px;
@@ -789,33 +788,6 @@ legend {
   min-width: 4px;
 }
 
-.donut {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 1rem;
-}
-
-.legenda {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 0.6rem;
-  font-size: 0.9rem;
-}
-
-.legenda li {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.legenda li span:last-child {
-  margin-left: 0.75rem;
-  color: var(--texto-suave);
-}
-
 .lista-status {
   list-style: none;
   margin: 0;
@@ -867,9 +839,5 @@ legend {
 
   .kpi__valor {
     font-size: 1.2rem;
-  }
-
-  .donut {
-    grid-template-columns: 1fr;
   }
 }

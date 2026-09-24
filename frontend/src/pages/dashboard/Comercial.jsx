@@ -1,11 +1,18 @@
-import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
+import { Bar, BarChart, CartesianGrid, LabelList, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import Painel from '../../components/dashboard/Painel';
-import { CORES, DicaGrafico } from '../../components/dashboard/graficos';
+import { CORES, DicaGrafico, eixo } from '../../components/dashboard/graficos';
 import { formatarMoeda, formatarMoedaCompacta, formatarNumero, formatarPercentual } from '../../utils/format';
+
+/** Topo do eixo com 15% de folga acima da maior coluna (para o percentual caber), arredondado. Ex.: 600 vira 800. */
+function limiteComFolga(maior) {
+  const passo = 2 * 10 ** Math.floor(Math.log10(Math.max(maior, 1)));
+  return Math.ceil((maior * 1.15) / passo) * passo;
+}
 
 export default function Comercial({ dados }) {
   const maiorPremio = Math.max(...dados.canais.map((canal) => canal.premioCentavos), 1);
   const totalApolices = dados.planos.reduce((soma, plano) => soma + plano.apolices, 0);
+  const planos = dados.planos.map((plano) => ({ ...plano, participacao: plano.apolices / (totalApolices || 1) }));
 
   return (
     <div className="dash-grid dash-grid--2">
@@ -40,36 +47,28 @@ export default function Comercial({ dados }) {
       </Painel>
 
       <Painel titulo="Mix de planos" subtitulo="Participação de cada plano nas apólices emitidas.">
-        <div className="donut">
-          <ResponsiveContainer width="100%" height={220}>
-            <PieChart>
-              <Pie data={dados.planos} dataKey="apolices" nameKey="plano" innerRadius="62%" outerRadius="90%" paddingAngle={1} stroke="#fff" strokeWidth={2}>
-                {dados.planos.map((plano, indice) => (
-                  <Cell key={plano.plano} fill={CORES.categorias[indice]} />
-                ))}
-              </Pie>
-              <Tooltip
-                content={
-                  <DicaGrafico
-                    linhas={(plano) => [
-                      [plano.plano, formatarNumero(plano.apolices)],
-                      ['Prêmio', formatarMoeda(plano.premioCentavos)],
-                    ]}
-                  />
-                }
-              />
-            </PieChart>
-          </ResponsiveContainer>
-          <ul className="legenda">
-            {dados.planos.map((plano, indice) => (
-              <li key={plano.plano}>
-                <span className="legenda__cor" style={{ background: CORES.categorias[indice] }} />
-                <strong>{plano.plano}</strong>
-                <span>{formatarPercentual(plano.apolices / (totalApolices || 1), 0)}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
+        <ResponsiveContainer width="100%" height={260}>
+          <BarChart data={planos} margin={{ top: 24, right: 8, bottom: 0, left: 0 }}>
+            <CartesianGrid vertical={false} stroke={CORES.grade} />
+            <XAxis dataKey="plano" {...eixo} />
+            <YAxis {...eixo} tickFormatter={formatarNumero} width={48} allowDecimals={false} domain={[0, limiteComFolga]} />
+            <Tooltip
+              cursor={{ fill: '#eef3f9' }}
+              content={
+                <DicaGrafico
+                  linhas={(plano) => [
+                    ['Apólices', formatarNumero(plano.apolices)],
+                    ['Participação', formatarPercentual(plano.participacao)],
+                    ['Prêmio', formatarMoeda(plano.premioCentavos)],
+                  ]}
+                />
+              }
+            />
+            <Bar dataKey="apolices" fill={CORES.serie} barSize={56} radius={[4, 4, 0, 0]}>
+              <LabelList dataKey="participacao" position="top" formatter={(valor) => formatarPercentual(valor, 0)} fill="#1b2533" fontSize={13} fontWeight={600} />
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
       </Painel>
 
       <Painel titulo="Ticket médio por plano" subtitulo="Quanto cada plano rende, em média, por apólice.">

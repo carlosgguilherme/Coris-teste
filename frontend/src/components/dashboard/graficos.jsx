@@ -4,7 +4,6 @@ import { Bar, BarChart, CartesianGrid, ReferenceLine, ResponsiveContainer, Toolt
 export const CORES = {
   serie: '#2a78d6',
   comparacao: '#b4b2a9',
-  categorias: ['#2a78d6', '#eb6834', '#1baf7a'],
   grade: '#e1e0d9',
   eixo: '#898781',
   referencia: '#d03b3b',

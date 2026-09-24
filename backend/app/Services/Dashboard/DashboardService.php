@@ -12,6 +12,7 @@ use App\Enums\StatusSinistro;
 use App\Models\Apolice;
 use App\Models\Atendimento;
 use App\Models\Campanha;
+use App\Models\Canal;
 use App\Models\Cotacao;
 use App\Models\FunilEvento;
 use App\Models\Sinistro;
@@ -21,6 +22,9 @@ use Illuminate\Support\Collection;
 /** Monta os números de cada visão da dashboard. As contas ficam em Metricas. */
 class DashboardService
 {
+    /** Apólices cadastradas pela tela, sem canal de venda. */
+    private const SEM_CANAL = 'Painel interno';
+
     private const CUSTO_SINISTRO = "SUM(CASE WHEN sinistros.status = 'pago' THEN valor_pago_centavos"
         ." WHEN sinistros.status = 'negado' THEN 0 ELSE valor_reclamado_centavos END)";
 
@@ -32,6 +36,21 @@ class DashboardService
         ['label' => 'Mais de 60 dias', 'ate' => PHP_INT_MAX],
     ];
 
+    private Filtros $filtros;
+
+    public function __construct()
+    {
+        $this->filtros = new Filtros;
+    }
+
+    /** Filtros de canal, plano e destino aplicados em todas as consultas seguintes. */
+    public function filtrar(Filtros $filtros): self
+    {
+        $this->filtros = $filtros;
+
+        return $this;
+    }
+
     public function visaoGeral(Periodo $periodo): array
     {
         $atual = $this->indicadores($periodo);
@@ -41,7 +60,7 @@ class DashboardService
             'kpis' => collect($atual)
                 ->map(fn ($valor, $chave) => ['valor' => $valor, 'anterior' => $anterior[$chave]])
                 ->all(),
-            'premioMensal' => $this->premioMensalComAnoAnterior(),
+            'serieMensal' => $this->serieMensal(),
         ];
     }
 
@@ -65,7 +84,7 @@ class DashboardService
             ->orderByDesc('premio')
             ->get()
             ->map(fn ($linha) => [
-                'canal' => $linha->canal ?? 'Painel interno',
+                'canal' => $linha->canal ?? self::SEM_CANAL,
                 'apolices' => (int) $linha->apolices,
                 'premioCentavos' => (int) $linha->premio,
                 'ticketMedioCentavos' => Metricas::ticketMedio((int) $linha->premio, (int) $linha->apolices),
@@ -117,7 +136,7 @@ class DashboardService
         $premio = (int) $this->apolicesEmitidas($periodo)->sum('valor_premio_centavos');
         $apolices = $this->apolicesEmitidas($periodo)->count();
         $custoSinistros = (int) $this->sinistrosAvisados($periodo)->selectRaw(self::CUSTO_SINISTRO.' as custo')->value('custo');
-        $cotacoes = Cotacao::whereBetween('created_at', $periodo->intervalo());
+        $cotacoes = $this->cotacoes($periodo);
 
         return [
             'premioEmitidoCentavos' => $premio,
@@ -129,34 +148,55 @@ class DashboardService
             ),
             'premioGanhoCentavos' => $this->premioGanho($periodo)->sum(),
             'sinistralidade' => Metricas::sinistralidade($custoSinistros, $this->premioGanho($periodo)->sum()),
-            'nps' => $this->nps(Atendimento::whereBetween('inicio', $periodo->intervalo())),
+            'nps' => $this->nps($this->atendimentos($periodo)),
         ];
     }
 
-    /** Prêmio dos últimos 12 meses, mês a mês, ao lado do mesmo mês do ano anterior. */
-    private function premioMensalComAnoAnterior(): Collection
+    /**
+     * Prêmio e apólices dos últimos 12 meses, mês a mês, com o mesmo mês do ano anterior
+     * e o detalhamento por canal e por plano.
+     */
+    private function serieMensal(): array
     {
-        $inicio = now()->startOfMonth()->subMonths(23);
-        $porMes = Apolice::where('created_at', '>=', $inicio)
-            ->where('status', '!=', StatusApolice::Cancelada)
-            ->get(['created_at', 'valor_premio_centavos'])
-            ->groupBy(fn (Apolice $apolice) => $apolice->created_at->format('Y-m'))
-            ->map(fn (Collection $apolices) => $apolices->sum('valor_premio_centavos'));
+        $vendas = $this->filtros->aplicar(Apolice::query(), 'apolices')->toBase()
+            ->leftJoin('canais', 'canais.id', '=', 'apolices.canal_id')
+            ->where('apolices.created_at', '>=', now()->startOfMonth()->subMonths(23))
+            ->where('apolices.status', '!=', StatusApolice::Cancelada)
+            ->get(['apolices.created_at', 'apolices.valor_premio_centavos', 'apolices.plano', 'canais.nome as canal'])
+            ->groupBy(fn ($venda) => substr($venda->created_at, 0, 7));
 
-        return collect(range(11, 0))->map(function (int $mesesAtras) use ($porMes) {
+        $meses = collect(range(11, 0))->map(function (int $mesesAtras) use ($vendas) {
             $mes = now()->startOfMonth()->subMonths($mesesAtras);
+            $doMes = $vendas[$mes->format('Y-m')] ?? collect();
 
             return [
                 'mes' => $mes->format('Y-m'),
-                'atualCentavos' => $porMes[$mes->format('Y-m')] ?? 0,
-                'anoAnteriorCentavos' => $porMes[$mes->copy()->subYear()->format('Y-m')] ?? 0,
+                'atual' => $this->somar($doMes),
+                'anoAnterior' => $this->somar($vendas[$mes->copy()->subYear()->format('Y-m')] ?? collect()),
+                'porCanal' => $doMes->groupBy(fn ($venda) => $venda->canal ?? self::SEM_CANAL)->map(fn ($grupo) => $this->somar($grupo)),
+                'porPlano' => $doMes->groupBy(fn ($venda) => Plano::from($venda->plano)->label())->map(fn ($grupo) => $this->somar($grupo)),
             ];
         });
+
+        return [
+            'meses' => $meses,
+            'canais' => Canal::orderBy('id')->pluck('nome')->push(self::SEM_CANAL),
+            'planos' => array_map(fn (Plano $plano) => $plano->label(), Plano::cases()),
+        ];
+    }
+
+    /** @return array{premioCentavos: int, apolices: int} */
+    private function somar(Collection $vendas): array
+    {
+        return ['premioCentavos' => (int) $vendas->sum('valor_premio_centavos'), 'apolices' => $vendas->count()];
     }
 
     private function funil(Periodo $periodo): Collection
     {
-        $totais = FunilEvento::query()->toBase()->join('cotacoes', 'cotacoes.id', '=', 'funil_eventos.cotacao_id')
+        $totais = $this->filtros->aplicar(
+            FunilEvento::query()->toBase()->join('cotacoes', 'cotacoes.id', '=', 'funil_eventos.cotacao_id'),
+            'cotacoes',
+        )
             ->whereBetween('cotacoes.created_at', $periodo->intervalo())
             ->groupBy('etapa')
             ->selectRaw('etapa, COUNT(DISTINCT cotacao_id) as total')
@@ -171,7 +211,7 @@ class DashboardService
 
     private function campanhas(Periodo $periodo): Collection
     {
-        $cotacoes = Cotacao::whereBetween('created_at', $periodo->intervalo())
+        $cotacoes = $this->cotacoes($periodo)
             ->whereNotNull('campanha_id')
             ->groupBy('campanha_id')
             ->selectRaw("campanha_id, COUNT(*) as total, SUM(CASE WHEN status = 'convertida' THEN 1 ELSE 0 END) as convertidas")
@@ -200,7 +240,7 @@ class DashboardService
 
     private function dispositivos(Periodo $periodo): Collection
     {
-        return Cotacao::whereBetween('created_at', $periodo->intervalo())
+        return $this->cotacoes($periodo)
             ->groupBy('device')
             ->selectRaw("device, COUNT(*) as total, SUM(CASE WHEN status = 'convertida' THEN 1 ELSE 0 END) as convertidas")
             ->get()
@@ -288,7 +328,7 @@ class DashboardService
 
     private function atendimento(Periodo $periodo): array
     {
-        $atendimentos = Atendimento::whereBetween('inicio', $periodo->intervalo());
+        $atendimentos = $this->atendimentos($periodo);
 
         $porCanal = (clone $atendimentos)->toBase()
             ->groupBy('canal')
@@ -314,7 +354,8 @@ class DashboardService
 
     private function npsMensal(): Collection
     {
-        $notas = Atendimento::where('inicio', '>=', now()->startOfMonth()->subMonths(11))
+        $notas = $this->filtros->pelaApolice(Atendimento::query())
+            ->where('inicio', '>=', now()->startOfMonth()->subMonths(11))
             ->whereNotNull('nps')
             ->get(['inicio', 'nps'])
             ->groupBy(fn (Atendimento $atendimento) => $atendimento->inicio->format('Y-m'));
@@ -347,7 +388,8 @@ class DashboardService
     {
         [$inicio, $fim] = [$periodo->inicio->copy()->startOfDay(), $periodo->fim->copy()->startOfDay()];
 
-        return Apolice::where('status', '!=', StatusApolice::Cancelada)
+        return $this->filtros->aplicar(Apolice::query(), 'apolices')
+            ->where('status', '!=', StatusApolice::Cancelada)
             ->where('inicio_vigencia', '<=', $fim->toDateString())
             ->where('fim_vigencia', '>=', $inicio->toDateString())
             ->get(['destino', 'inicio_vigencia', 'fim_vigencia', 'valor_premio_centavos'])
@@ -362,15 +404,26 @@ class DashboardService
     /** Apólices emitidas no período, sem as canceladas. */
     private function apolicesEmitidas(Periodo $periodo): Builder
     {
-        return Apolice::query()
+        return $this->filtros->aplicar(Apolice::query(), 'apolices')
             ->whereBetween('apolices.created_at', $periodo->intervalo())
             ->where('apolices.status', '!=', StatusApolice::Cancelada);
+    }
+
+    private function cotacoes(Periodo $periodo): Builder
+    {
+        return $this->filtros->aplicar(Cotacao::query(), 'cotacoes')->whereBetween('cotacoes.created_at', $periodo->intervalo());
+    }
+
+    private function atendimentos(Periodo $periodo): Builder
+    {
+        return $this->filtros->pelaApolice(Atendimento::query())->whereBetween('inicio', $periodo->intervalo());
     }
 
     private function sinistrosAvisados(Periodo $periodo): Builder
     {
         [$inicio, $fim] = $periodo->intervalo();
 
-        return Sinistro::query()->whereBetween('data_aviso', [$inicio->toDateString(), $fim->toDateString()]);
+        return $this->filtros->pelaApolice(Sinistro::query())
+            ->whereBetween('data_aviso', [$inicio->toDateString(), $fim->toDateString()]);
     }
 }

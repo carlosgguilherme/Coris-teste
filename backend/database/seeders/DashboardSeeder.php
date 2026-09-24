@@ -198,8 +198,9 @@ class DashboardSeeder extends Seeder
 
             foreach (range(1, max($quantidade, 1)) as $_) {
                 $emissao = $mes->copy()->addDays(mt_rand(0, $ultimoDia - 1))->setTime(mt_rand(8, 23), mt_rand(0, 59));
+                $recuo = mt_rand(5, 300); // sorteado sempre, para a sequência não depender da hora em que o seeder roda
 
-                yield $emissao->gt(now()) ? now()->subMinutes(mt_rand(5, 300)) : $emissao;
+                yield $emissao->gt(now()) ? now()->subMinutes($recuo) : $emissao;
             }
         }
     }

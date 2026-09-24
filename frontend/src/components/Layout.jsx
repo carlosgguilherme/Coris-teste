@@ -6,8 +6,9 @@ export default function Layout() {
       <header className="topbar">
         <div className="container topbar__content">
           <Link to="/apolices" className="brand">
+            <img src="/favicon.svg" alt="" width="32" height="32" />
             <div>
-              <strong>Mariano Seguros</strong>
+              <strong>Coris Seguros</strong>
               <span>Gestão de Apólices</span>
             </div>
           </Link>

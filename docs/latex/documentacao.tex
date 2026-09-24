@@ -1,4 +1,4 @@
-% Relatório técnico do projeto - Mariano Seguros (Gestão de Apólices de Seguro Viagem)
+% Relatório técnico do projeto - Seguro Viagem (Gestão de Apólices)
 % Compilar dentro de docs/latex:  pdflatex documentacao.tex  (duas vezes, para o sumário e as listas)
 \documentclass[12pt,a4paper]{article}
 
@@ -61,7 +61,7 @@
   \vspace{4cm}
   {\bfseries CARLOS GUILHERME FONTES PEREIRA\par}
   \vfill
-  {\Large\bfseries MARIANO SEGUROS:\\[0.3em] SISTEMA DE GESTÃO DE APÓLICES DE SEGURO VIAGEM COM DASHBOARD DE INDICADORES\par}
+  {\Large\bfseries SEGURO VIAGEM:\\[0.3em] SISTEMA DE GESTÃO DE APÓLICES COM DASHBOARD DE INDICADORES\par}
   \vspace{1em}
   {Relatório técnico do projeto\par}
   \vfill
@@ -73,7 +73,7 @@
 \begin{center}
   {\bfseries CARLOS GUILHERME FONTES PEREIRA\par}
   \vspace{5cm}
-  {\large\bfseries MARIANO SEGUROS: SISTEMA DE GESTÃO DE APÓLICES DE SEGURO VIAGEM COM DASHBOARD DE INDICADORES\par}
+  {\large\bfseries SEGURO VIAGEM: SISTEMA DE GESTÃO DE APÓLICES COM DASHBOARD DE INDICADORES\par}
 \end{center}
 \vspace{2cm}
 \begin{flushright}
@@ -95,8 +95,7 @@
 
 \begin{singlespace}
 Este relatório descreve o desenvolvimento de uma aplicação web para a gestão de apólices de
-seguro viagem da Mariano Seguros, uma seguradora fictícia, construída como resposta a um desafio
-técnico. A aplicação permite cadastrar,
+seguro viagem, construída como resposta a um desafio técnico. A aplicação permite cadastrar,
 consultar, editar e excluir apólices, calculando o valor do seguro (prêmio) a partir do plano, do
 destino, da duração da viagem e da idade do segurado. Além do cadastro, foi construída uma
 \emph{dashboard} com indicadores voltados a três públicos: a diretoria, o time de marketing, que
@@ -135,9 +134,6 @@ O seguro viagem é contratado por quem vai viajar para cobrir despesas médicas,
 bagagem, cancelamento da viagem e outros imprevistos. Para a seguradora, cada contrato é uma
 \emph{apólice}: um documento que registra quem é o segurado, para onde vai, por quanto tempo,
 qual plano contratou e quanto pagou por isso. O valor pago é chamado de \emph{prêmio}.
-
-Como cenário do projeto, foi adotada a \textbf{Mariano Seguros}, uma seguradora fictícia que vende
-seguro viagem por site, agências de viagem, corretores, parceiros e aplicativo.
 
 O desafio proposto consistiu em desenvolver uma aplicação capaz de realizar o ciclo completo de
 cadastro dessas apólices (leitura, cadastro, edição e exclusão), aplicando boas práticas de

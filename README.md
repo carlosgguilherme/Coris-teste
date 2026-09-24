@@ -7,6 +7,7 @@ Seguro Viagem é uma aplicação web para **gestão de apólices de seguro viage
 ## Requisitos atendidos
 
 - Leitura, cadastro, edição e exclusão de apólices
+- **Dashboard** com indicadores de vendas, marketing, sinistros e atendimento
 - Conceitos de **SOLID** e **Clean Code** (Controller, Form Request, Service e Calculadora separados)
 - Frontend em **React 18**
 - Banco de dados relacional (**MySQL**) com relacionamento **1:N**
@@ -19,7 +20,7 @@ Seguro Viagem é uma aplicação web para **gestão de apólices de seguro viage
 ## Tecnologias
 
 - **Backend:** Laravel 12 (PHP 8.3)
-- **Frontend:** React 18 + Vite + React Router
+- **Frontend:** React 18 + Vite + React Router + Recharts (gráficos)
 - **Banco:** MySQL 8 (SQLite para rodar local sem instalar banco)
 - **Testes:** PHPUnit
 - **Docker:** Apache + PHP, MySQL e Nginx servindo o React
@@ -43,6 +44,16 @@ Seguro Viagem é uma aplicação web para **gestão de apólices de seguro viage
 
 - **Segurado** → possui muitas **Apólices** (1:N). É identificado pelo CPF e reaproveitado entre apólices
 - **Apólice** → pertence a um **Segurado**, tem destino, plano, vigência, prêmio e status (ativa ou cancelada)
+
+Tabelas que alimentam a dashboard (criadas em migrations novas, sem alterar as antigas):
+
+- **Canais** (site, agências, corretores, parceiros, app) e **Campanhas** de marketing (UTM, orçamento e investimento) → a apólice passa a guardar o canal e a campanha da venda
+- **Cotações** → toda simulação de preço, convertida em apólice ou abandonada (e em qual etapa)
+- **Eventos do funil** → um registro por etapa que o cliente passou (iniciada → preço calculado → dados → pagamento → emitida)
+- **Sinistros** → pertencem a uma apólice, com cobertura acionada, valor reclamado, valor pago e status
+- **Atendimentos** → contatos com a central 24h (canal, tempo de espera, SLA e nota NPS)
+
+O diagrama completo está em [`docs/modelo-de-dados.md`](docs/modelo-de-dados.md).
 
 ---
 
@@ -72,6 +83,35 @@ Seguro Viagem é uma aplicação web para **gestão de apólices de seguro viage
 
 ---
 
+## Dashboard
+
+Tela **Dashboard** com filtro de período (30 dias, 90 dias, 12 meses e 24 meses) e quatro visões. O período e a visão ficam na URL, então dá para compartilhar o link.
+
+- **Visão geral:** prêmio emitido, apólices, ticket médio, conversão, sinistralidade e NPS, cada um comparado com o período anterior; prêmio mês a mês contra o ano anterior
+- **Marketing:** funil de conversão com a etapa de maior abandono destacada, conversão por dispositivo, ROI por campanha, destinos mais vendidos e antecedência da compra
+- **Comercial:** vendas e ticket médio por canal, mix de planos
+- **Sinistros e atendimento:** frequência, custo médio, sinistralidade por destino (meta de 60%), custo por cobertura, NPS e SLA da central
+
+As fórmulas ficam em um lugar só (`app/Services/Dashboard/Metricas.php`):
+
+| Métrica | Fórmula |
+|---|---|
+| Ticket médio | prêmio emitido ÷ apólices |
+| Conversão | cotações convertidas ÷ cotações |
+| Prêmio ganho | prêmio × (dias de viagem dentro do período ÷ dias da viagem) |
+| Sinistralidade | custo dos sinistros ÷ prêmio ganho |
+| Frequência | sinistros avisados ÷ apólices emitidas |
+| Custo médio (severidade) | custo dos sinistros ÷ quantidade de sinistros |
+| Taxa de negativa | sinistros negados ÷ sinistros finalizados |
+| ROI da campanha | (prêmio gerado − investimento) ÷ investimento |
+| NPS | % de promotores (nota 9–10) − % de detratores (nota 0–6) |
+
+O **custo do sinistro** é o valor pago quando já foi pago, zero quando foi negado e o valor reclamado enquanto ainda está em aberto.
+
+**Dados de demonstração:** o `DashboardSeeder` gera 24 meses de histórico (cerca de 2.800 apólices, 12.800 cotações, 180 sinistros e 1.800 atendimentos) com sazonalidade (julho, dezembro e janeiro mais fortes), crescimento de 12% ao ano, campanhas sazonais e conversão menor no celular. Usa semente fixa, então os números são sempre os mesmos.
+
+---
+
 ## Organização do backend
 
 ```
@@ -80,6 +120,8 @@ app/Http/Requests               validação (SalvarApoliceRequest, CotacaoReques
 app/Http/Controllers/Api        recebe a requisição e chama o service
 app/Services/ApoliceService     regras de negócio (criar, atualizar, excluir, cotar, resumo)
 app/Services/Premio             CalculadoraPremio (interface) e CalculadoraPremioViagem
+app/Services/Dashboard          DashboardService (monta cada visão), Metricas (fórmulas) e Periodo (filtro)
+database/seeders                DashboardSeeder (histórico de 24 meses) e exemplos
 app/Models                      Segurado e Apolice (Eloquent)
 app/Enums                       Plano, Destino e StatusApolice
 app/Http/Resources              formato do JSON de resposta
@@ -117,15 +159,18 @@ docker compose up -d --build
 
 Na subida a API roda as migrations sozinha.
 
-## 2) Popular com dados de exemplo (opcional)
+## 2) Popular com dados de exemplo
 
 ```bash
 docker compose exec api php artisan db:seed
 ```
 
+Cria os canais, o histórico de 24 meses da dashboard e algumas apólices de exemplo.
+
 ## 3) Acessar
 
 - App: **http://localhost:3000**
+- Dashboard: **http://localhost:3000/dashboard**
 - API: **http://localhost:8000/api/apolices**
 
 > Se precisar recriar o banco do zero: `docker compose down -v` e subir de novo.
@@ -167,6 +212,7 @@ npm run dev
 - `DELETE /api/apolices/{id}` - exclusão lógica
 - `POST /api/apolices/cotacao` - calcula o prêmio sem salvar
 - `GET /api/opcoes` - planos, destinos e status
+- `GET /api/dashboard/{visao}?periodo=` - números da dashboard (`visao-geral`, `marketing`, `comercial` ou `sinistros`; período `30d`, `90d`, `12m` ou `24m`)
 
 Erros de validação voltam com status `422` e a mensagem por campo.
 
@@ -198,6 +244,7 @@ Feito pelo Portal da Azure, no Resource Group `rg-coris-seguros` (Brazil South).
 - Infraestrutura como código (Bicep) para criar os recursos da Azure
 - Testes no frontend
 - Pipeline de CI próprio rodando os testes antes do deploy
+- Dashboard: tabela de métricas diárias pré-calculadas e cache, para quando o volume de dados crescer
 
 ---
 

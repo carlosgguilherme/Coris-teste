@@ -319,6 +319,75 @@ Para criar um novo plano basta adicionar um \texttt{case}: o frontend obtém a l
 \texttt{/api/opcoes} e passa a exibi-lo sem alteração.
 
 % =====================================================================
+\section{Dashboard}
+
+A tela \emph{Dashboard} reúne indicadores de vendas, marketing, sinistros e atendimento, com
+filtro de período (30 dias, 90 dias, 12 e 24 meses) e quatro visões: visão geral, marketing,
+comercial e sinistros/atendimento. O período e a visão ficam na URL, o que permite compartilhar o link.
+
+\subsection{Tabelas}
+
+As tabelas antigas não foram alteradas diretamente: foram criadas \emph{migrations} novas.
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}lX@{}}
+\toprule
+Tabela & Conteúdo \\
+\midrule
+\texttt{canais} & site, agências, corretores, parceiros e app \\
+\texttt{campanhas} & campanhas de marketing, com UTM, orçamento e investimento \\
+\texttt{cotacoes} & toda simulação de preço, convertida em apólice ou abandonada \\
+\texttt{funil\_eventos} & um registro para cada etapa que o cliente passou na cotação \\
+\texttt{sinistros} & ocorrências cobertas pela apólice: valor reclamado, valor pago e status \\
+\texttt{atendimentos} & contatos com a central 24h: canal, tempo de espera, SLA e nota NPS \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+A apólice ganhou \texttt{canal\_id} e \texttt{campanha\_id}, opcionais, para saber de onde veio cada venda.
+
+\subsection{Fórmulas}
+
+Todas as contas ficam na classe \arq{app/Services/Dashboard/Metricas.php}, para que todas as telas
+usem a mesma fórmula:
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}lX@{}}
+\toprule
+Métrica & Fórmula \\
+\midrule
+Ticket médio & prêmio emitido $\div$ apólices \\
+Conversão & cotações convertidas $\div$ cotações \\
+Prêmio ganho & prêmio $\times$ (dias de viagem dentro do período $\div$ dias da viagem) \\
+Sinistralidade & custo dos sinistros $\div$ prêmio ganho \\
+Frequência & sinistros avisados $\div$ apólices emitidas \\
+Taxa de negativa & sinistros negados $\div$ sinistros finalizados \\
+ROI da campanha & (prêmio gerado $-$ investimento) $\div$ investimento \\
+NPS & \% de promotores (notas 9 e 10) $-$ \% de detratores (notas 0 a 6) \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+A sinistralidade usa o \textbf{prêmio ganho}, e não o emitido: uma apólice vendida hoje para uma
+viagem daqui a dois meses ainda não correu risco. Usar o prêmio emitido distorce o indicador em
+períodos curtos.
+
+\subsection{Organização}
+
+O \arq{DashboardController} valida o período e chama o \arq{DashboardService}, que tem um método
+por visão e monta os números com consultas agrupadas (\texttt{GROUP BY}). A classe \arq{Periodo}
+calcula o intervalo escolhido e o período anterior, de mesmo tamanho, usado na comparação dos
+indicadores. No frontend, cada visão é um componente em \arq{src/pages/dashboard/}, e os gráficos
+usam a biblioteca Recharts.
+
+\subsection{Dados de demonstração}
+
+O \arq{DashboardSeeder} gera 24 meses de histórico, com cerca de 2.800 apólices, 12.800 cotações,
+180 sinistros e 1.800 atendimentos, com sazonalidade (julho, dezembro e janeiro mais fortes),
+crescimento de 12\% ao ano e conversão menor no celular. Ele usa uma semente fixa
+(\texttt{mt\_srand(2026)}), então gera sempre os mesmos dados.
+
+% =====================================================================
 \section{SOLID e Clean Code}
 
 \begin{center}
@@ -355,6 +424,7 @@ PUT & \texttt{/api/apolices/\{id\}} & edição, com recálculo do prêmio \\
 DELETE & \texttt{/api/apolices/\{id\}} & exclusão lógica (204) \\
 POST & \texttt{/api/apolices/cotacao} & calcula o prêmio sem salvar \\
 GET & \texttt{/api/opcoes} & planos, destinos e status \\
+GET & \texttt{/api/dashboard/\{visao\}} & números de uma visão da dashboard (\texttt{periodo}) \\
 \bottomrule
 \end{tabularx}
 \end{center}
@@ -405,15 +475,18 @@ evitando que uma resposta antiga substitua a mais recente. A busca da lista usa 
 % =====================================================================
 \section{Testes}
 
-São 25 testes automatizados (PHPUnit), executados com \texttt{php artisan test} na pasta
+São 37 testes automatizados (PHPUnit), executados com \texttt{php artisan test} na pasta
 \arq{backend}.
 
 \begin{itemize}
   \item \textbf{Unitários:} \arq{CalculadoraPremioViagemTest} verifica cinco combinações de plano,
-        destino e idade; \arq{CpfTest} verifica CPFs válidos e inválidos.
+        destino e idade; \arq{CpfTest} verifica CPFs válidos e inválidos; \arq{MetricasTest}
+        verifica as fórmulas da dashboard.
   \item \textbf{De API:} \arq{ApoliceApiTest} faz requisições reais e verifica cadastro, reaproveitamento
         do segurado, busca e paginação, edição com recálculo, regra da apólice cancelada, exclusão
         lógica, mensagens de validação, limites da vigência, cotação e resumo.
+  \item \textbf{Da dashboard:} \arq{DashboardApiTest} verifica os indicadores de cada visão, o funil,
+        o ROI de campanha, a sinistralidade e o seeder de demonstração.
 \end{itemize}
 
 Nos testes de API a data atual é fixada com \texttt{Carbon::setTestNow('2026-09-20')}, para que o

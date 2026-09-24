@@ -1,4 +1,4 @@
-import { Link, Outlet } from 'react-router-dom';
+import { Link, NavLink, Outlet } from 'react-router-dom';
 
 export default function Layout() {
   return (
@@ -12,6 +12,14 @@ export default function Layout() {
               <span>Gestão de Apólices</span>
             </div>
           </Link>
+          <nav className="menu">
+            <NavLink to="/apolices" className="menu__item">
+              Apólices
+            </NavLink>
+            <NavLink to="/dashboard" className="menu__item">
+              Dashboard
+            </NavLink>
+          </nav>
         </div>
       </header>
 

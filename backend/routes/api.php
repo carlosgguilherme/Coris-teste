@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\ApoliceController;
+use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\OpcoesController;
 use Illuminate\Support\Facades\Route;
 
@@ -12,3 +13,6 @@ Route::post('/apolices/cotacao', [ApoliceController::class, 'cotacao']);
 Route::apiResource('apolices', ApoliceController::class)
     ->parameters(['apolices' => 'apolice'])
     ->whereNumber('apolice');
+
+Route::get('/dashboard/{visao}', DashboardController::class)
+    ->whereIn('visao', ['visao-geral', 'marketing', 'comercial', 'sinistros']);

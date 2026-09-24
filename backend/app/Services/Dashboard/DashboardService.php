@@ -1,0 +1,376 @@
+<?php
+
+namespace App\Services\Dashboard;
+
+use App\Enums\CanalAtendimento;
+use App\Enums\Cobertura;
+use App\Enums\Destino;
+use App\Enums\Plano;
+use App\Enums\StatusApolice;
+use App\Enums\StatusCotacao;
+use App\Enums\StatusSinistro;
+use App\Models\Apolice;
+use App\Models\Atendimento;
+use App\Models\Campanha;
+use App\Models\Cotacao;
+use App\Models\FunilEvento;
+use App\Models\Sinistro;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
+
+/** Monta os números de cada visão da dashboard. As contas ficam em Metricas. */
+class DashboardService
+{
+    private const CUSTO_SINISTRO = "SUM(CASE WHEN sinistros.status = 'pago' THEN valor_pago_centavos"
+        ." WHEN sinistros.status = 'negado' THEN 0 ELSE valor_reclamado_centavos END)";
+
+    private const FAIXAS_ANTECEDENCIA = [
+        ['label' => 'Até 7 dias', 'ate' => 6],
+        ['label' => '7 a 15 dias', 'ate' => 15],
+        ['label' => '16 a 30 dias', 'ate' => 30],
+        ['label' => '31 a 60 dias', 'ate' => 60],
+        ['label' => 'Mais de 60 dias', 'ate' => PHP_INT_MAX],
+    ];
+
+    public function visaoGeral(Periodo $periodo): array
+    {
+        $atual = $this->indicadores($periodo);
+        $anterior = $this->indicadores($periodo->anterior());
+
+        return [
+            'kpis' => collect($atual)
+                ->map(fn ($valor, $chave) => ['valor' => $valor, 'anterior' => $anterior[$chave]])
+                ->all(),
+            'premioMensal' => $this->premioMensalComAnoAnterior(),
+        ];
+    }
+
+    public function marketing(Periodo $periodo): array
+    {
+        return [
+            'funil' => $this->funil($periodo),
+            'campanhas' => $this->campanhas($periodo),
+            'dispositivos' => $this->dispositivos($periodo),
+            'destinos' => $this->porDestino($periodo),
+            'antecedencia' => $this->antecedenciaDaCompra($periodo),
+        ];
+    }
+
+    public function comercial(Periodo $periodo): array
+    {
+        $canais = $this->apolicesEmitidas($periodo)->toBase()
+            ->leftJoin('canais', 'canais.id', '=', 'apolices.canal_id')
+            ->groupBy('canais.nome')
+            ->selectRaw('canais.nome as canal, COUNT(*) as apolices, SUM(valor_premio_centavos) as premio')
+            ->orderByDesc('premio')
+            ->get()
+            ->map(fn ($linha) => [
+                'canal' => $linha->canal ?? 'Painel interno',
+                'apolices' => (int) $linha->apolices,
+                'premioCentavos' => (int) $linha->premio,
+                'ticketMedioCentavos' => Metricas::ticketMedio((int) $linha->premio, (int) $linha->apolices),
+            ]);
+
+        $planos = $this->apolicesEmitidas($periodo)->toBase()
+            ->groupBy('plano')
+            ->selectRaw('plano, COUNT(*) as apolices, SUM(valor_premio_centavos) as premio')
+            ->get()
+            ->map(fn ($linha) => [
+                'plano' => Plano::from($linha->plano)->label(),
+                'apolices' => (int) $linha->apolices,
+                'premioCentavos' => (int) $linha->premio,
+                'ticketMedioCentavos' => Metricas::ticketMedio((int) $linha->premio, (int) $linha->apolices),
+            ])
+            ->sortByDesc('apolices')
+            ->values();
+
+        return ['canais' => $canais, 'planos' => $planos];
+    }
+
+    public function sinistros(Periodo $periodo): array
+    {
+        $sinistros = $this->sinistrosAvisados($periodo)->toBase()
+            ->selectRaw('COUNT(*) as quantidade, '.self::CUSTO_SINISTRO.' as custo')
+            ->selectRaw("SUM(CASE WHEN sinistros.status = 'negado' THEN 1 ELSE 0 END) as negados")
+            ->selectRaw("SUM(CASE WHEN sinistros.status IN ('pago', 'negado') THEN 1 ELSE 0 END) as finalizados")
+            ->first();
+
+        $apolices = $this->apolicesEmitidas($periodo)->count();
+
+        return [
+            'kpis' => [
+                'sinistros' => (int) $sinistros->quantidade,
+                'frequencia' => Metricas::frequencia((int) $sinistros->quantidade, $apolices),
+                'severidadeCentavos' => Metricas::severidade((int) $sinistros->custo, (int) $sinistros->quantidade),
+                'sinistralidade' => Metricas::sinistralidade((int) $sinistros->custo, $this->premioGanho($periodo)->sum()),
+                'taxaNegativa' => Metricas::taxaNegativa((int) $sinistros->negados, (int) $sinistros->finalizados),
+            ],
+            'status' => $this->sinistrosPorStatus($periodo),
+            'porDestino' => $this->sinistralidadePorDestino($periodo),
+            'porCobertura' => $this->custoPorCobertura($periodo),
+            'atendimento' => $this->atendimento($periodo),
+        ];
+    }
+
+    private function indicadores(Periodo $periodo): array
+    {
+        $premio = (int) $this->apolicesEmitidas($periodo)->sum('valor_premio_centavos');
+        $apolices = $this->apolicesEmitidas($periodo)->count();
+        $custoSinistros = (int) $this->sinistrosAvisados($periodo)->selectRaw(self::CUSTO_SINISTRO.' as custo')->value('custo');
+        $cotacoes = Cotacao::whereBetween('created_at', $periodo->intervalo());
+
+        return [
+            'premioEmitidoCentavos' => $premio,
+            'apolices' => $apolices,
+            'ticketMedioCentavos' => Metricas::ticketMedio($premio, $apolices),
+            'conversao' => Metricas::conversao(
+                (clone $cotacoes)->where('status', StatusCotacao::Convertida)->count(),
+                $cotacoes->count(),
+            ),
+            'premioGanhoCentavos' => $this->premioGanho($periodo)->sum(),
+            'sinistralidade' => Metricas::sinistralidade($custoSinistros, $this->premioGanho($periodo)->sum()),
+            'nps' => $this->nps(Atendimento::whereBetween('inicio', $periodo->intervalo())),
+        ];
+    }
+
+    /** Prêmio dos últimos 12 meses, mês a mês, ao lado do mesmo mês do ano anterior. */
+    private function premioMensalComAnoAnterior(): Collection
+    {
+        $inicio = now()->startOfMonth()->subMonths(23);
+        $porMes = Apolice::where('created_at', '>=', $inicio)
+            ->where('status', '!=', StatusApolice::Cancelada)
+            ->get(['created_at', 'valor_premio_centavos'])
+            ->groupBy(fn (Apolice $apolice) => $apolice->created_at->format('Y-m'))
+            ->map(fn (Collection $apolices) => $apolices->sum('valor_premio_centavos'));
+
+        return collect(range(11, 0))->map(function (int $mesesAtras) use ($porMes) {
+            $mes = now()->startOfMonth()->subMonths($mesesAtras);
+
+            return [
+                'mes' => $mes->format('Y-m'),
+                'atualCentavos' => $porMes[$mes->format('Y-m')] ?? 0,
+                'anoAnteriorCentavos' => $porMes[$mes->copy()->subYear()->format('Y-m')] ?? 0,
+            ];
+        });
+    }
+
+    private function funil(Periodo $periodo): Collection
+    {
+        $totais = FunilEvento::query()->toBase()->join('cotacoes', 'cotacoes.id', '=', 'funil_eventos.cotacao_id')
+            ->whereBetween('cotacoes.created_at', $periodo->intervalo())
+            ->groupBy('etapa')
+            ->selectRaw('etapa, COUNT(DISTINCT cotacao_id) as total')
+            ->pluck('total', 'etapa');
+
+        return collect(StatusCotacao::etapasDoFunil())->map(fn (StatusCotacao $etapa) => [
+            'etapa' => $etapa->value,
+            'label' => $etapa->label(),
+            'total' => (int) ($totais[$etapa->value] ?? 0),
+        ]);
+    }
+
+    private function campanhas(Periodo $periodo): Collection
+    {
+        $cotacoes = Cotacao::whereBetween('created_at', $periodo->intervalo())
+            ->whereNotNull('campanha_id')
+            ->groupBy('campanha_id')
+            ->selectRaw("campanha_id, COUNT(*) as total, SUM(CASE WHEN status = 'convertida' THEN 1 ELSE 0 END) as convertidas")
+            ->get()
+            ->keyBy('campanha_id');
+
+        $premios = $this->apolicesEmitidas($periodo)->toBase()
+            ->whereNotNull('campanha_id')
+            ->groupBy('campanha_id')
+            ->selectRaw('campanha_id, SUM(valor_premio_centavos) as premio')
+            ->pluck('premio', 'campanha_id');
+
+        return Campanha::whereIn('id', $cotacoes->keys())
+            ->orderBy('inicio')
+            ->get()
+            ->map(fn (Campanha $campanha) => [
+                'nome' => $campanha->nome,
+                'utmSource' => $campanha->utm_source,
+                'cotacoes' => (int) $cotacoes[$campanha->id]->total,
+                'conversao' => Metricas::conversao((int) $cotacoes[$campanha->id]->convertidas, (int) $cotacoes[$campanha->id]->total),
+                'premioCentavos' => (int) ($premios[$campanha->id] ?? 0),
+                'investimentoCentavos' => $campanha->investimento_centavos,
+                'roi' => Metricas::roi((int) ($premios[$campanha->id] ?? 0), $campanha->investimento_centavos),
+            ]);
+    }
+
+    private function dispositivos(Periodo $periodo): Collection
+    {
+        return Cotacao::whereBetween('created_at', $periodo->intervalo())
+            ->groupBy('device')
+            ->selectRaw("device, COUNT(*) as total, SUM(CASE WHEN status = 'convertida' THEN 1 ELSE 0 END) as convertidas")
+            ->get()
+            ->map(fn ($linha) => [
+                'device' => $linha->device === 'mobile' ? 'Celular' : 'Computador',
+                'cotacoes' => (int) $linha->total,
+                'conversao' => Metricas::conversao((int) $linha->convertidas, (int) $linha->total),
+            ]);
+    }
+
+    private function porDestino(Periodo $periodo): Collection
+    {
+        return $this->apolicesEmitidas($periodo)->toBase()
+            ->groupBy('destino')
+            ->selectRaw('destino, COUNT(*) as apolices, SUM(valor_premio_centavos) as premio')
+            ->orderByDesc('apolices')
+            ->get()
+            ->map(fn ($linha) => [
+                'destino' => Destino::from($linha->destino)->label(),
+                'apolices' => (int) $linha->apolices,
+                'premioCentavos' => (int) $linha->premio,
+            ]);
+    }
+
+    /** Quantos dias antes da viagem o cliente comprou o seguro. */
+    private function antecedenciaDaCompra(Periodo $periodo): Collection
+    {
+        $antecedencias = $this->apolicesEmitidas($periodo)
+            ->get(['created_at', 'inicio_vigencia'])
+            ->map(fn (Apolice $apolice) => (int) $apolice->created_at->copy()->startOfDay()->diffInDays($apolice->inicio_vigencia, false));
+
+        $faixas = collect(self::FAIXAS_ANTECEDENCIA)->map(fn ($faixa) => ['faixa' => $faixa['label'], 'apolices' => 0])->all();
+        foreach ($antecedencias as $dias) {
+            $indice = collect(self::FAIXAS_ANTECEDENCIA)->search(fn ($faixa) => $dias <= $faixa['ate']);
+            $faixas[$indice]['apolices']++;
+        }
+
+        return collect($faixas);
+    }
+
+    private function sinistrosPorStatus(Periodo $periodo): Collection
+    {
+        $totais = $this->sinistrosAvisados($periodo)->toBase()
+            ->groupBy('sinistros.status')
+            ->selectRaw('sinistros.status, COUNT(*) as total')
+            ->pluck('total', 'status');
+
+        return collect(StatusSinistro::cases())->map(fn (StatusSinistro $status) => [
+            'status' => $status->label(),
+            'total' => (int) ($totais[$status->value] ?? 0),
+        ]);
+    }
+
+    private function sinistralidadePorDestino(Periodo $periodo): Collection
+    {
+        $premios = $this->premioGanho($periodo, porDestino: true);
+
+        $custos = $this->sinistrosAvisados($periodo)->toBase()
+            ->join('apolices', 'apolices.id', '=', 'sinistros.apolice_id')
+            ->groupBy('apolices.destino')
+            ->selectRaw('apolices.destino, COUNT(*) as quantidade, '.self::CUSTO_SINISTRO.' as custo')
+            ->get()
+            ->keyBy('destino');
+
+        return $premios->map(fn ($premio, $destino) => [
+            'destino' => Destino::from($destino)->label(),
+            'sinistros' => (int) ($custos[$destino]->quantidade ?? 0),
+            'sinistralidade' => Metricas::sinistralidade((int) ($custos[$destino]->custo ?? 0), (int) $premio),
+        ])->sortByDesc('sinistralidade')->values();
+    }
+
+    private function custoPorCobertura(Periodo $periodo): Collection
+    {
+        return $this->sinistrosAvisados($periodo)->toBase()
+            ->groupBy('cobertura')
+            ->selectRaw('cobertura, COUNT(*) as quantidade, '.self::CUSTO_SINISTRO.' as custo')
+            ->orderByDesc('custo')
+            ->get()
+            ->map(fn ($linha) => [
+                'cobertura' => Cobertura::from($linha->cobertura)->label(),
+                'sinistros' => (int) $linha->quantidade,
+                'custoCentavos' => (int) $linha->custo,
+            ]);
+    }
+
+    private function atendimento(Periodo $periodo): array
+    {
+        $atendimentos = Atendimento::whereBetween('inicio', $periodo->intervalo());
+
+        $porCanal = (clone $atendimentos)->toBase()
+            ->groupBy('canal')
+            ->selectRaw('canal, COUNT(*) as total, AVG(tempo_espera_seg) as espera, SUM(CASE WHEN dentro_sla THEN 1 ELSE 0 END) as no_prazo')
+            ->get()
+            ->map(fn ($linha) => [
+                'canal' => CanalAtendimento::from($linha->canal)->label(),
+                'atendimentos' => (int) $linha->total,
+                'esperaMediaSeg' => (int) round($linha->espera),
+                'sla' => round($linha->no_prazo / $linha->total, 4),
+            ]);
+
+        $total = (clone $atendimentos)->count();
+
+        return [
+            'nps' => $this->nps(clone $atendimentos),
+            'atendimentos' => $total,
+            'sla' => $total > 0 ? round((clone $atendimentos)->where('dentro_sla', true)->count() / $total, 4) : null,
+            'porCanal' => $porCanal,
+            'npsMensal' => $this->npsMensal(),
+        ];
+    }
+
+    private function npsMensal(): Collection
+    {
+        $notas = Atendimento::where('inicio', '>=', now()->startOfMonth()->subMonths(11))
+            ->whereNotNull('nps')
+            ->get(['inicio', 'nps'])
+            ->groupBy(fn (Atendimento $atendimento) => $atendimento->inicio->format('Y-m'));
+
+        return collect(range(11, 0))->map(function (int $mesesAtras) use ($notas) {
+            $mes = now()->startOfMonth()->subMonths($mesesAtras)->format('Y-m');
+            $doMes = $notas[$mes] ?? collect();
+
+            return [
+                'mes' => $mes,
+                'nps' => Metricas::nps($doMes->where('nps', '>=', 9)->count(), $doMes->where('nps', '<=', 6)->count(), $doMes->count()),
+            ];
+        });
+    }
+
+    private function nps(Builder $atendimentos): ?int
+    {
+        $notas = $atendimentos->whereNotNull('nps')
+            ->selectRaw('COUNT(*) as respostas, SUM(CASE WHEN nps >= 9 THEN 1 ELSE 0 END) as promotores, SUM(CASE WHEN nps <= 6 THEN 1 ELSE 0 END) as detratores')
+            ->first();
+
+        return Metricas::nps((int) $notas->promotores, (int) $notas->detratores, (int) $notas->respostas);
+    }
+
+    /**
+     * Prêmio ganho no período (total ou por destino): cada apólice em vigor no período
+     * contribui com a parte do prêmio proporcional aos seus dias de viagem dentro dele.
+     */
+    private function premioGanho(Periodo $periodo, bool $porDestino = false): Collection
+    {
+        [$inicio, $fim] = [$periodo->inicio->copy()->startOfDay(), $periodo->fim->copy()->startOfDay()];
+
+        return Apolice::where('status', '!=', StatusApolice::Cancelada)
+            ->where('inicio_vigencia', '<=', $fim->toDateString())
+            ->where('fim_vigencia', '>=', $inicio->toDateString())
+            ->get(['destino', 'inicio_vigencia', 'fim_vigencia', 'valor_premio_centavos'])
+            ->groupBy(fn (Apolice $apolice) => $porDestino ? $apolice->destino->value : 'total')
+            ->map(fn (Collection $apolices) => $apolices->sum(function (Apolice $apolice) use ($inicio, $fim) {
+                $diasNoPeriodo = (int) $apolice->inicio_vigencia->max($inicio)->diffInDays($apolice->fim_vigencia->min($fim)) + 1;
+
+                return Metricas::premioGanho($apolice->valor_premio_centavos, $diasNoPeriodo, $apolice->dias());
+            }));
+    }
+
+    /** Apólices emitidas no período, sem as canceladas. */
+    private function apolicesEmitidas(Periodo $periodo): Builder
+    {
+        return Apolice::query()
+            ->whereBetween('apolices.created_at', $periodo->intervalo())
+            ->where('apolices.status', '!=', StatusApolice::Cancelada);
+    }
+
+    private function sinistrosAvisados(Periodo $periodo): Builder
+    {
+        [$inicio, $fim] = $periodo->intervalo();
+
+        return Sinistro::query()->whereBetween('data_aviso', [$inicio->toDateString(), $fim->toDateString()]);
+    }
+}

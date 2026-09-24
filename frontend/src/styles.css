@@ -841,3 +841,25 @@ legend {
     font-size: 1.2rem;
   }
 }
+
+.filtros-grafico {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.filtros-grafico select {
+  width: auto;
+}
+
+.filtros-grafico label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.9rem;
+}
+
+.filtros-grafico input {
+  width: auto;
+}

@@ -9,6 +9,8 @@ class DatabaseSeeder extends Seeder
 {
     public function run(ApoliceService $service): void
     {
+        $this->call([CanaisSeeder::class, DashboardSeeder::class]);
+
         $data = fn (int $dias) => today()->addDays($dias)->toDateString();
 
         $apolices = [

@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Apolice extends Model
@@ -20,6 +21,8 @@ class Apolice extends Model
     protected $fillable = [
         'numero',
         'segurado_id',
+        'canal_id',
+        'campanha_id',
         'destino',
         'plano',
         'inicio_vigencia',
@@ -43,6 +46,21 @@ class Apolice extends Model
     public function segurado(): BelongsTo
     {
         return $this->belongsTo(Segurado::class);
+    }
+
+    public function canal(): BelongsTo
+    {
+        return $this->belongsTo(Canal::class);
+    }
+
+    public function campanha(): BelongsTo
+    {
+        return $this->belongsTo(Campanha::class);
+    }
+
+    public function sinistros(): HasMany
+    {
+        return $this->hasMany(Sinistro::class);
     }
 
     public function dias(): int

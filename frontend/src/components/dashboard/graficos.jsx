@@ -4,8 +4,6 @@ import { Bar, BarChart, CartesianGrid, ReferenceLine, ResponsiveContainer, Toolt
 export const CORES = {
   serie: '#2a78d6',
   comparacao: '#b4b2a9',
-  /** Uma cor por categoria, sempre na mesma ordem (a cor segue o canal/plano, não a posição no ranking). */
-  categorias: ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300'],
   grade: '#e1e0d9',
   eixo: '#898781',
   referencia: '#d03b3b',

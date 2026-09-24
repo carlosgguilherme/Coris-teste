@@ -554,160 +554,15 @@ legend {
 
 /* ---------- Dashboard ---------- */
 
-.barra-filtros {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0.75rem;
-  padding: 1rem;
-  margin-bottom: 0.75rem;
-}
-
-.filtro {
+.filtro-periodo {
   display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--texto-suave);
-}
-
-.chips {
-  display: flex;
-  flex-wrap: wrap;
+  align-items: center;
   gap: 0.5rem;
-  margin-bottom: 0.75rem;
+  font-size: 0.9rem;
 }
 
-.chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  border: 1px solid #c9dcf2;
-  background: var(--azul-claro);
-  color: var(--azul-escuro);
-  border-radius: 999px;
-  padding: 0.3rem 0.75rem;
-  font: inherit;
-  font-size: 0.85rem;
-  cursor: pointer;
-}
-
-.chip span {
-  font-size: 1.05rem;
-  line-height: 1;
-}
-
-.chip--limpar {
-  background: none;
-  border-color: transparent;
-  color: var(--texto-suave);
-  text-decoration: underline;
-}
-
-.controles {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: 1rem 1.5rem;
-}
-
-.segmentado {
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-}
-
-.segmentado__rotulo {
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--texto-suave);
-}
-
-.segmentado__botoes {
-  display: inline-flex;
-  background: #eef2f6;
-  border-radius: 8px;
-  padding: 3px;
-}
-
-.segmentado__botao {
-  border: none;
-  background: none;
-  font: inherit;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--texto-suave);
-  padding: 0.35rem 0.8rem;
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-.segmentado__botao--ativo {
-  background: var(--branco);
-  color: var(--azul);
-  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.12);
-}
-
-.alternar {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-  font-size: 0.85rem;
-  padding-bottom: 0.4rem;
-  cursor: pointer;
-}
-
-.alternar input {
+.filtro-periodo select {
   width: auto;
-  accent-color: var(--azul);
-}
-
-.alternar--desativado {
-  opacity: 0.5;
-  cursor: default;
-}
-
-.legenda-series {
-  list-style: none;
-  margin: 0 0 -0.5rem;
-  padding: 0;
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 0.4rem 1rem;
-  font-size: 0.85rem;
-  color: var(--texto-suave);
-}
-
-.legenda-series li {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-}
-
-.legenda-series__cor {
-  width: 12px;
-  height: 12px;
-  border-radius: 3px;
-}
-
-.resumo-serie {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 0.75rem;
-}
-
-.resumo-serie > div {
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-  border-left: 3px solid var(--azul-claro);
-  padding-left: 0.75rem;
-  font-size: 0.8rem;
-}
-
-.resumo-serie strong {
-  font-size: 1.15rem;
 }
 
 .abas {
@@ -970,10 +825,6 @@ legend {
 @media (max-width: 860px) {
   .dash-grid--2 {
     grid-template-columns: 1fr;
-  }
-
-  .barra-filtros {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .menu__item {

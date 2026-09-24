@@ -44,13 +44,8 @@ class DashboardApiTest extends TestCase
             ->assertJsonPath('kpis.ticketMedioCentavos.valor', 40000)
             ->assertJsonPath('kpis.conversao.valor', 0.5)
             ->assertJsonPath('kpis.nps.valor', 0)
-            ->assertJsonCount(12, 'serieMensal.meses')
-            ->assertJsonPath('serieMensal.meses.11.mes', '2026-09')
-            ->assertJsonPath('serieMensal.meses.11.atual', ['premioCentavos' => 40000, 'apolices' => 1])
-            ->assertJsonPath('serieMensal.meses.11.anoAnterior', ['premioCentavos' => 0, 'apolices' => 0])
-            ->assertJsonPath('serieMensal.meses.11.porCanal.Site', ['premioCentavos' => 40000, 'apolices' => 1])
-            ->assertJsonPath('serieMensal.meses.11.porPlano.Plus.apolices', 1)
-            ->assertJsonPath('serieMensal.canais.0', 'Site');
+            ->assertJsonCount(12, 'premioMensal')
+            ->assertJsonPath('premioMensal.11', ['mes' => '2026-09', 'atualCentavos' => 40000, 'anoAnteriorCentavos' => 0]);
     }
 
     public function test_funil_conta_cada_cotacao_nas_etapas_por_onde_passou(): void
@@ -108,45 +103,6 @@ class DashboardApiTest extends TestCase
             ->assertJsonPath('porCobertura.0.custoCentavos', 80000);
     }
 
-    public function test_filtros_de_canal_plano_e_destino(): void
-    {
-        $this->apolice(premio: 30000, emitidaEm: '2026-09-10', canal: 'agencia');
-        $this->apolice(premio: 50000, emitidaEm: '2026-09-11', canal: 'site');
-        $this->apolice(premio: 70000, emitidaEm: '2026-09-12', canal: 'site', destino: 'asia');
-
-        $this->getJson('/api/dashboard/visao-geral?periodo=30d&canal=site')
-            ->assertJsonPath('kpis.premioEmitidoCentavos.valor', 120000)
-            ->assertJsonPath('kpis.apolices.valor', 2);
-
-        $this->getJson('/api/dashboard/visao-geral?periodo=30d&canal=site&destino=asia')
-            ->assertJsonPath('kpis.premioEmitidoCentavos.valor', 70000)
-            ->assertJsonPath('serieMensal.meses.11.atual.apolices', 1);
-
-        $this->getJson('/api/dashboard/comercial?periodo=30d&plano=premium')
-            ->assertJsonCount(0, 'canais');
-    }
-
-    public function test_filtro_de_sinistros_usa_a_apolice(): void
-    {
-        $europa = $this->apolice(premio: 100000, emitidaEm: '2026-08-25', inicio: '2026-09-01', fim: '2026-09-10');
-        $asia = $this->apolice(premio: 100000, emitidaEm: '2026-08-25', inicio: '2026-09-01', fim: '2026-09-10', destino: 'asia');
-        $this->sinistro($europa, 'pago', reclamado: 10000, pago: 10000);
-        $this->sinistro($asia, 'pago', reclamado: 50000, pago: 50000);
-
-        $this->getJson('/api/dashboard/sinistros?periodo=30d&destino=asia')
-            ->assertJsonPath('kpis.sinistros', 1)
-            ->assertJsonPath('kpis.sinistralidade', 0.5);
-    }
-
-    public function test_filtros_invalidos(): void
-    {
-        $this->getJson('/api/dashboard/marketing?canal=televisao&plano=ouro&destino=lua')
-            ->assertUnprocessable()
-            ->assertJsonPath('errors.canal.0', 'Canal inválido.')
-            ->assertJsonPath('errors.plano.0', 'Plano inválido.')
-            ->assertJsonPath('errors.destino.0', 'Destino inválido.');
-    }
-
     public function test_periodo_invalido(): void
     {
         $this->getJson('/api/dashboard/visao-geral?periodo=5anos')
@@ -179,7 +135,7 @@ class DashboardApiTest extends TestCase
         $this->assertSame($apolices, Apolice::count());
     }
 
-    private function apolice(int $premio, string $emitidaEm, string $status = 'ativa', string $canal = 'site', ?Campanha $campanha = null, string $inicio = '2026-10-01', string $fim = '2026-10-10', string $destino = 'europa'): Apolice
+    private function apolice(int $premio, string $emitidaEm, string $status = 'ativa', string $canal = 'site', ?Campanha $campanha = null, string $inicio = '2026-10-01', string $fim = '2026-10-10'): Apolice
     {
         $apolice = Apolice::create([
             'numero' => 'CRS-'.Str::upper(Str::random(8)),
@@ -189,7 +145,7 @@ class DashboardApiTest extends TestCase
             )->id,
             'canal_id' => Canal::where('codigo', $canal)->value('id'),
             'campanha_id' => $campanha?->id,
-            'destino' => $destino,
+            'destino' => 'europa',
             'plano' => 'plus',
             'inicio_vigencia' => $inicio,
             'fim_vigencia' => $fim,

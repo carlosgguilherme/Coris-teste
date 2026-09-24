@@ -85,9 +85,7 @@ O diagrama completo está em [`docs/modelo-de-dados.md`](docs/modelo-de-dados.md
 
 ## Dashboard
 
-Tela **Dashboard** com quatro visões e filtros de **período** (30 dias, 90 dias, 12 meses e 24 meses), **canal**, **plano** e **destino**, que valem para todos os indicadores. Os filtros ativos aparecem como etiquetas (com "Limpar filtros") e ficam na URL, então dá para compartilhar o link.
-
-O gráfico **Evolução mês a mês** tem controles próprios: métrica (prêmio, apólices ou ticket médio), detalhar por canal ou plano (áreas empilhadas), comparar com o ano anterior e ver como tabela.
+Tela **Dashboard** com filtro de período (30 dias, 90 dias, 12 meses e 24 meses) e quatro visões. O período e a visão ficam na URL, então dá para compartilhar o link.
 
 - **Visão geral:** prêmio emitido, apólices, ticket médio, conversão, sinistralidade e NPS, cada um comparado com o período anterior; prêmio mês a mês contra o ano anterior
 - **Marketing:** funil de conversão com a etapa de maior abandono destacada, conversão por dispositivo, ROI por campanha, destinos mais vendidos e antecedência da compra
@@ -214,7 +212,7 @@ npm run dev
 - `DELETE /api/apolices/{id}` - exclusão lógica
 - `POST /api/apolices/cotacao` - calcula o prêmio sem salvar
 - `GET /api/opcoes` - planos, destinos e status
-- `GET /api/dashboard/{visao}?periodo=&canal=&plano=&destino=` - números da dashboard (`visao-geral`, `marketing`, `comercial` ou `sinistros`; período `30d`, `90d`, `12m` ou `24m`)
+- `GET /api/dashboard/{visao}?periodo=` - números da dashboard (`visao-geral`, `marketing`, `comercial` ou `sinistros`; período `30d`, `90d`, `12m` ou `24m`)
 
 Erros de validação voltam com status `422` e a mensagem por campo.
 

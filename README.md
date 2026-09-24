@@ -89,9 +89,9 @@ O diagrama também está em [`docs/der.svg`](docs/der.svg) e, em Mermaid, em [`d
 
 Tela **Dashboard** com filtro de período (30 dias, 90 dias, 12 meses e 24 meses) e quatro visões. O período e a visão ficam na URL, então dá para compartilhar o link.
 
-- **Visão geral:** prêmio emitido, apólices, ticket médio, conversão, sinistralidade e NPS, cada um comparado com o período anterior; prêmio mês a mês contra o ano anterior
-- **Marketing:** funil de conversão com a etapa de maior abandono destacada, conversão por dispositivo, ROI por campanha, destinos mais vendidos e antecedência da compra
-- **Comercial:** vendas e ticket médio por canal, mix de planos
+- **Visão geral** (diretoria): prêmio emitido, apólices, ticket médio, conversão, sinistralidade e NPS, cada um comparado com o período anterior; prêmio mês a mês contra o ano anterior (6 ou 12 meses, linha ou colunas)
+- **Marketing** (a campanha converte e o investimento volta?): cotações, conversão, investimento, prêmio gerado, ROI e custo por apólice; funil de conversão com a etapa de maior abandono; conversão por canal; **campanha em detalhe**, escolhida numa lista, com gráfico semanal de cotações e apólices; comparativo das campanhas; antecedência da compra
+- **Comercial** (quanto vendemos): prêmio emitido, apólices, ticket médio e cancelamentos comparados com o período anterior; vendas e participação por canal; vendas por destino; mix de planos e ticket médio por plano
 - **Sinistros e atendimento:** frequência, custo médio, sinistralidade por destino (meta de 60%), custo por cobertura, NPS e SLA da central
 
 As fórmulas ficam em um lugar só (`app/Services/Dashboard/Metricas.php`):
@@ -106,6 +106,8 @@ As fórmulas ficam em um lugar só (`app/Services/Dashboard/Metricas.php`):
 | Custo médio (severidade) | custo dos sinistros ÷ quantidade de sinistros |
 | Taxa de negativa | sinistros negados ÷ sinistros finalizados |
 | ROI da campanha | (prêmio gerado − investimento) ÷ investimento |
+| Custo por apólice | investimento da campanha ÷ apólices vendidas por ela |
+| Participação do canal | prêmio do canal ÷ prêmio total |
 | NPS | % de promotores (nota 9–10) − % de detratores (nota 0–6) |
 
 O **custo do sinistro** é o valor pago quando já foi pago, zero quando foi negado e o valor reclamado enquanto ainda está em aberto.
@@ -169,12 +171,13 @@ $this->app->bind(CalculadoraPremio::class, CalculadoraPremioViagem::class);
 | Pergunta do time | Onde responder |
 |---|---|
 | Estamos vendendo mais do que no ano passado? | Visão geral: KPIs com variação e prêmio por mês contra o ano anterior |
-| Qual canal vende mais e com maior ticket? | Comercial: vendas por canal |
+| Qual canal vende mais e com maior ticket? | Comercial: vendas e participação por canal |
 | Qual plano o cliente prefere? | Comercial: mix de planos |
 | Em que etapa da cotação perdemos o cliente? | Marketing: funil com a etapa de maior abandono |
-| Qual campanha deu retorno? | Marketing: ROI por campanha |
-| O site no celular converte bem? | Marketing: conversão por dispositivo |
+| Qual campanha deu retorno e quanto custou cada venda? | Marketing: campanha em detalhe e comparativo (ROI e custo por apólice) |
+| Qual canal converte melhor as cotações? | Marketing: conversão por canal |
 | Com quanta antecedência o cliente compra? | Marketing: antecedência da compra |
+| Para quais destinos mais vendemos? | Comercial: vendas por destino |
 | Algum destino dá prejuízo? | Sinistros: sinistralidade por destino contra a meta de 60% |
 | O cliente está satisfeito com o atendimento? | Sinistros e atendimento: NPS e SLA por canal |
 

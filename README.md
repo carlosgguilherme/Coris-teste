@@ -8,10 +8,10 @@ Seguro Viagem é uma aplicação web para **gestão de apólices de seguro viage
 
 - Leitura, cadastro, edição e exclusão de apólices
 - **Dashboard** com indicadores de vendas, marketing, sinistros e atendimento
-- Conceitos de **SOLID** e **Clean Code** (Controller, Form Request, Service e Calculadora separados)
+- Conceitos de **SOLID** e **Clean Code** (veja [onde cada um aparece](#onde-estão-o-solid-e-o-clean-code))
 - Frontend em **React 18**
-- Banco de dados relacional (**MySQL**) com relacionamento **1:N**
-- Desenho de solução com componentes da **Azure**
+- Banco de dados relacional (**MySQL**) com relacionamentos **1:N** ([diagrama](#modelagem-do-domínio))
+- Desenho de solução com componentes da **Azure** (publicação pendente)
 - Testes automatizados (PHPUnit)
 - Docker para desenvolvimento local
 
@@ -42,6 +42,8 @@ Seguro Viagem é uma aplicação web para **gestão de apólices de seguro viage
 
 ## Modelagem do Domínio
 
+![Diagrama de entidade e relacionamento](docs/der.png)
+
 - **Segurado** → possui muitas **Apólices** (1:N). É identificado pelo CPF e reaproveitado entre apólices
 - **Apólice** → pertence a um **Segurado**, tem destino, plano, vigência, prêmio e status (ativa ou cancelada)
 
@@ -53,7 +55,7 @@ Tabelas que alimentam a dashboard (criadas em migrations novas, sem alterar as a
 - **Sinistros** → pertencem a uma apólice, com cobertura acionada, valor reclamado, valor pago e status
 - **Atendimentos** → contatos com a central 24h (canal, tempo de espera, SLA e nota NPS)
 
-O diagrama completo está em [`docs/modelo-de-dados.md`](docs/modelo-de-dados.md).
+O diagrama também está em [`docs/der.svg`](docs/der.svg) e, em Mermaid, em [`docs/modelo-de-dados.md`](docs/modelo-de-dados.md).
 
 ---
 
@@ -127,10 +129,56 @@ app/Enums                       Plano, Destino e StatusApolice
 app/Http/Resources              formato do JSON de resposta
 ```
 
-- **S** - cada classe com uma responsabilidade: o Form Request valida, o Controller só trata HTTP, o Service tem a regra e a Calculadora só calcula
-- **O** - plano ou destino novo é um novo `case` no enum; outra regra de preço é outra classe que implementa `CalculadoraPremio`
-- **L / D** - o `ApoliceService` recebe a interface `CalculadoraPremio` por injeção de dependência; a implementação é definida no `AppServiceProvider`
-- **I** - a interface da calculadora tem um método só
+---
+
+## Onde estão o SOLID e o Clean Code
+
+| Princípio | Onde aparece no código |
+|---|---|
+| **S** - Responsabilidade única | `SalvarApoliceRequest` só valida, `ApoliceController` só trata o HTTP, `ApoliceService` só aplica a regra, `CalculadoraPremioViagem` só calcula e `ApoliceResource` só formata o JSON. Na dashboard: `DashboardController`, `DashboardService`, `Metricas` e `Periodo` |
+| **O** - Aberto/fechado | Nova regra de preço = nova classe que implementa `CalculadoraPremio`, sem mexer no `ApoliceService`. Novo plano ou destino = novo `case` em `app/Enums` |
+| **L** - Substituição de Liskov | Qualquer implementação de `CalculadoraPremio` substitui a `CalculadoraPremioViagem`; o service só conhece o contrato |
+| **I** - Segregação de interfaces | `CalculadoraPremio` tem um único método, `calcular` |
+| **D** - Inversão de dependência | O construtor do `ApoliceService` recebe a interface; o `AppServiceProvider` decide a implementação |
+
+```php
+// app/Services/ApoliceService.php: depende da interface
+public function __construct(private readonly CalculadoraPremio $calculadora) {}
+
+// app/Providers/AppServiceProvider.php: escolhe a implementação
+$this->app->bind(CalculadoraPremio::class, CalculadoraPremioViagem::class);
+```
+
+**Clean Code**
+
+- **Nomes do negócio:** `ApoliceService::criar`, `Segurado::cpfFormatado`, `Metricas::sinistralidade`, `Plano::diariaCentavos`
+- **Métodos curtos:** `ApoliceService::criar` delega para `salvarSegurado`, `premio` e `gerarNumero`
+- **Sem números mágicos:** preços e fatores nos enums `Plano` e `Destino`; limites em `CotacaoRequest::VIGENCIA_MAXIMA_DIAS` e `ApoliceService::POR_PAGINA`
+- **Fórmula em um só lugar:** todas as contas da dashboard em `app/Services/Dashboard/Metricas.php`
+- **Controller enxuto:** métodos de uma ou duas linhas; validação nos Form Requests
+- **Erros centralizados:** `bootstrap/app.php` padroniza os erros da API em JSON e em português
+- **Testes legíveis:** o nome descreve a regra, por exemplo `test_apolice_cancelada_so_pode_ser_reativada`
+- **Frontend:** as telas não chamam `fetch`; usam `src/api` e os hooks, e a formatação fica em `src/utils/format.js`
+
+---
+
+## Diferenciais
+
+**Dashboard para o time de vendas e marketing.** Além do CRUD pedido, a dashboard transforma os dados das apólices em informação para decidir:
+
+| Pergunta do time | Onde responder |
+|---|---|
+| Estamos vendendo mais do que no ano passado? | Visão geral: KPIs com variação e prêmio por mês contra o ano anterior |
+| Qual canal vende mais e com maior ticket? | Comercial: vendas por canal |
+| Qual plano o cliente prefere? | Comercial: mix de planos |
+| Em que etapa da cotação perdemos o cliente? | Marketing: funil com a etapa de maior abandono |
+| Qual campanha deu retorno? | Marketing: ROI por campanha |
+| O site no celular converte bem? | Marketing: conversão por dispositivo |
+| Com quanta antecedência o cliente compra? | Marketing: antecedência da compra |
+| Algum destino dá prejuízo? | Sinistros: sinistralidade por destino contra a meta de 60% |
+| O cliente está satisfeito com o atendimento? | Sinistros e atendimento: NPS e SLA por canal |
+
+**Técnicos:** cotação em tempo real, regras reais de seguro (prêmio por plano, destino, dias e idade; CPF; vigência), exclusão lógica para auditoria, dinheiro em centavos, testes automatizados, Docker, dados de demonstração com 24 meses de histórico e desenho de solução na Azure.
 
 ---
 

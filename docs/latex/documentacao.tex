@@ -12,6 +12,7 @@
 \usepackage{tabularx}
 \usepackage{amsmath}
 \usepackage{tikz}
+\usepackage{graphicx}
 \usetikzlibrary{positioning,arrows.meta}
 \usepackage[hidelinks]{hyperref}
 
@@ -52,9 +53,10 @@
 \begin{abstract}
 Este documento descreve o funcionamento de uma aplicação web para gestão de apólices de seguro
 viagem, construída com Laravel 12 (PHP 8.3), React 18 e MySQL 8, com implantação prevista na
-Microsoft Azure. São apresentados o modelo de dados, as regras de negócio, a organização do
-código em camadas, a API e os testes automatizados, com o objetivo de permitir que o leitor
-entenda o sistema e consiga modificá-lo.
+Microsoft Azure. Além do cadastro de apólices, a aplicação tem uma \emph{dashboard} com
+indicadores para os times de vendas, marketing e sinistros. São apresentados o modelo de dados,
+as regras de negócio, a organização do código em camadas, onde estão aplicados os princípios
+SOLID e de Clean Code, os diferenciais do projeto, a API e os testes automatizados.
 \end{abstract}
 
 \tableofcontents
@@ -75,6 +77,9 @@ O projeto está dividido em duas partes independentes que conversam por HTTP/JSO
   \item \textbf{frontend} (\arq{frontend/}): interface em React, que apenas exibe dados e envia formulários.
 \end{itemize}
 
+A interface tem duas áreas: \textbf{Apólices}, com o CRUD completo, e \textbf{Dashboard}, com os
+indicadores de negócio (Seção~\ref{sec:dashboard}).
+
 \subsection{Tecnologias}
 
 \begin{center}
@@ -83,7 +88,7 @@ O projeto está dividido em duas partes independentes que conversam por HTTP/JSO
 Camada & Tecnologia \\
 \midrule
 Backend & PHP 8.3, Laravel 12 \\
-Frontend & React 18, Vite, React Router \\
+Frontend & React 18, Vite, React Router, Recharts (gráficos) \\
 Banco de dados & MySQL 8 (SQLite no desenvolvimento local) \\
 Testes & PHPUnit \\
 Ambiente & Docker Compose \\
@@ -95,19 +100,37 @@ Nuvem & Microsoft Azure \\
 % =====================================================================
 \section{Modelo de dados}
 
-O banco possui duas tabelas com relacionamento \textbf{1:N}: um segurado pode ter várias
-apólices, e cada apólice pertence a um único segurado.
+O banco tem oito tabelas. \texttt{segurados} e \texttt{apolices} formam o cadastro principal
+(o CRUD); as outras seis guardam os dados usados pela dashboard. A Figura~\ref{fig:der} mostra o
+diagrama de entidade e relacionamento completo, com a cardinalidade de cada relação.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{../der.png}
+  \caption{Diagrama de entidade e relacionamento (também em \arq{docs/der.svg}).}
+  \label{fig:der}
+\end{figure}
 
 \begin{center}
-\begin{tikzpicture}[tab/.style={draw, align=left, font=\ttfamily\small, inner sep=5pt}]
-  \node[tab] (s) {\textbf{segurados}\\[2pt]
-    id (PK)\\ nome\\ cpf (único)\\ email\\ data\_nascimento};
-  \node[tab, right=3cm of s] (a) {\textbf{apolices}\\[2pt]
-    id (PK)\\ numero (único)\\ segurado\_id (FK)\\ destino, plano\\
-    inicio\_vigencia, fim\_vigencia\\ valor\_premio\_centavos\\ status\\ deleted\_at};
-  \draw (s.east) -- node[above, font=\small]{1 \hspace{2cm} N} (s.east -| a.west);
-\end{tikzpicture}
+\begin{tabularx}{\linewidth}{@{}lX@{}}
+\toprule
+Tabela & O que guarda \\
+\midrule
+\texttt{segurados} & quem contrata o seguro; o CPF é único \\
+\texttt{apolices} & o contrato: destino, plano, vigência, prêmio, status, canal e campanha da venda \\
+\texttt{canais} & por onde a apólice foi vendida: site, agências, corretores, parceiros e app \\
+\texttt{campanhas} & campanhas de marketing, com origem (UTM), orçamento e investimento \\
+\texttt{cotacoes} & toda simulação de preço, convertida em apólice ou abandonada \\
+\texttt{funil\_eventos} & cada etapa que o cliente passou na cotação (iniciada, preço, dados, pagamento, emitida) \\
+\texttt{sinistros} & ocorrências cobertas pela apólice: cobertura, valor reclamado, valor pago e status \\
+\texttt{atendimentos} & contatos com a central 24h: canal, tempo de espera, SLA e nota NPS \\
+\bottomrule
+\end{tabularx}
 \end{center}
+
+\textbf{Relacionamentos principais:} um segurado tem várias apólices; uma apólice pode ter vários
+sinistros e atendimentos; um canal e uma campanha originam várias apólices e cotações; uma
+cotação tem vários eventos de funil e, quando convertida, gera no máximo uma apólice.
 
 Três decisões merecem destaque:
 
@@ -123,7 +146,9 @@ Três decisões merecem destaque:
         mantidos para auditoria.
 \end{enumerate}
 
-As tabelas são criadas pelas \emph{migrations} em \arq{backend/database/migrations/}.
+As tabelas são criadas pelas \emph{migrations} em \arq{backend/database/migrations/}. As seis
+tabelas da dashboard vieram em \emph{migrations} novas, sem editar as antigas; \texttt{canal\_id}
+e \texttt{campanha\_id} entraram na apólice como colunas opcionais, então o cadastro existente não mudou.
 
 % =====================================================================
 \section{Regras de negócio}
@@ -288,8 +313,9 @@ Pontos importantes:
 O arredondamento usa apenas inteiros: \texttt{intdiv(centavos * percentual + 50, 100)}. Somar 50
 antes da divisão inteira arredonda para o centavo mais próximo.
 
-A ligação entre a interface e a implementação é feita em
-\arq{app/Providers/AppServiceProvider.php}:
+A ligação entre a interface e a implementação fica no \emph{service provider}:
+
+\begin{center}\arq{app/Providers/AppServiceProvider.php}\end{center}
 
 \begin{lstlisting}[style=php,numbers=none]
 $this->app->bind(CalculadoraPremio::class, CalculadoraPremioViagem::class);
@@ -319,32 +345,29 @@ Para criar um novo plano basta adicionar um \texttt{case}: o frontend obtém a l
 \texttt{/api/opcoes} e passa a exibi-lo sem alteração.
 
 % =====================================================================
-\section{Dashboard}
+\section{Dashboard}\label{sec:dashboard}
 
 A tela \emph{Dashboard} reúne indicadores de vendas, marketing, sinistros e atendimento, com
-filtro de período (30 dias, 90 dias, 12 e 24 meses) e quatro visões: visão geral, marketing,
-comercial e sinistros/atendimento. O período e a visão ficam na URL, o que permite compartilhar o link.
-
-\subsection{Tabelas}
-
-As tabelas antigas não foram alteradas diretamente: foram criadas \emph{migrations} novas.
+filtro de período (30 dias, 90 dias, 12 e 24 meses) e quatro visões. O período e a visão ficam na
+URL, o que permite compartilhar o link. Os dados vêm das tabelas descritas na
+Figura~\ref{fig:der}.
 
 \begin{center}
 \begin{tabularx}{\linewidth}{@{}lX@{}}
 \toprule
-Tabela & Conteúdo \\
+Visão & O que mostra \\
 \midrule
-\texttt{canais} & site, agências, corretores, parceiros e app \\
-\texttt{campanhas} & campanhas de marketing, com UTM, orçamento e investimento \\
-\texttt{cotacoes} & toda simulação de preço, convertida em apólice ou abandonada \\
-\texttt{funil\_eventos} & um registro para cada etapa que o cliente passou na cotação \\
-\texttt{sinistros} & ocorrências cobertas pela apólice: valor reclamado, valor pago e status \\
-\texttt{atendimentos} & contatos com a central 24h: canal, tempo de espera, SLA e nota NPS \\
+Visão geral & prêmio emitido, apólices, ticket médio, conversão, sinistralidade e NPS, comparados
+  ao período anterior; gráfico de prêmio por mês contra o ano anterior, com opções de
+  6 ou 12 meses, linha ou colunas e mostrar ou não o ano anterior \\
+Marketing & funil de conversão com a etapa de maior abandono, conversão por dispositivo, ROI das
+  campanhas, destinos mais vendidos e antecedência da compra \\
+Comercial & vendas e ticket médio por canal, mix de planos \\
+Sinistros e atendimento & frequência, custo médio, sinistralidade por destino (meta de 60\%),
+  custo por cobertura, NPS e SLA da central \\
 \bottomrule
 \end{tabularx}
 \end{center}
-
-A apólice ganhou \texttt{canal\_id} e \texttt{campanha\_id}, opcionais, para saber de onde veio cada venda.
 
 \subsection{Fórmulas}
 
@@ -388,25 +411,135 @@ crescimento de 12\% ao ano e conversão menor no celular. Ele usa uma semente fi
 (\texttt{mt\_srand(2026)}), então gera sempre os mesmos dados.
 
 % =====================================================================
-\section{SOLID e Clean Code}
+\section{Onde estão o SOLID e o Clean Code}\label{sec:solid}
+
+Esta seção aponta, para cada princípio, o arquivo e a classe onde ele aparece, para facilitar a
+leitura do código.
+
+\subsection{SOLID}
 
 \begin{center}
-\begin{tabularx}{\linewidth}{@{}lX@{}}
+\begin{tabularx}{\linewidth}{@{}p{3.2cm}X@{}}
 \toprule
-Princípio & Aplicação \\
+Princípio & Onde aparece no código \\
 \midrule
-S -- Responsabilidade única & validação, HTTP, regra de negócio, cálculo e formatação em classes distintas \\
-O -- Aberto/fechado & nova regra de preço é uma nova classe que implementa \texttt{CalculadoraPremio}; novo plano é um novo \texttt{case} \\
-L -- Substituição de Liskov & qualquer implementação da calculadora pode substituir a atual \\
-I -- Segregação de interfaces & a interface da calculadora possui um único método \\
-D -- Inversão de dependência & o service depende da interface; o provider escolhe a implementação \\
+\textbf{S} -- Responsabilidade única &
+  No cadastro, cada etapa é uma classe: \arq{SalvarApoliceRequest} só valida,
+  \arq{ApoliceController} só trata o HTTP, \arq{ApoliceService} só aplica a regra de negócio,
+  \arq{CalculadoraPremioViagem} só calcula o prêmio e \arq{ApoliceResource} só formata o JSON.
+  Na dashboard, o mesmo: \arq{DashboardController} (HTTP), \arq{DashboardService} (consultas),
+  \arq{Metricas} (fórmulas) e \arq{Periodo} (datas do filtro). \\
+\addlinespace
+\textbf{O} -- Aberto/fechado &
+  Uma nova regra de preço (uma promoção, por exemplo) é uma nova classe que implementa
+  \arq{CalculadoraPremio}, sem alterar o \arq{ApoliceService}. Um novo plano ou destino é um novo
+  \texttt{case} em \arq{app/Enums/Plano.php} ou \arq{Destino.php}; o frontend recebe a lista pela
+  rota \texttt{/api/opcoes} e passa a exibi-lo sem alteração. \\
+\addlinespace
+\textbf{L} -- Substituição de Liskov &
+  Qualquer classe que implemente \arq{CalculadoraPremio} pode substituir a
+  \arq{CalculadoraPremioViagem}: o service só conhece o contrato (recebe plano, destino e datas,
+  devolve centavos). \\
+\addlinespace
+\textbf{I} -- Segregação de interfaces &
+  A interface \arq{app/Services/Premio/CalculadoraPremio.php} tem um único método,
+  \texttt{calcular}. \\
+\addlinespace
+\textbf{D} -- Inversão de dependência &
+  O construtor do \arq{ApoliceService} recebe a interface, não a classe concreta; quem decide a
+  implementação é o \arq{app/Providers/AppServiceProvider.php}. \\
 \bottomrule
 \end{tabularx}
 \end{center}
 
-Quanto a Clean Code: os nomes seguem o vocabulário do negócio (apólice, segurado, prêmio,
-vigência), os métodos são curtos e os valores fixos ficam em enums ou constantes
-(\texttt{VIGENCIA\_MAXIMA\_DIAS}, \texttt{POR\_PAGINA}).
+O trecho que mostra a inversão de dependência na prática:
+
+\begin{lstlisting}[style=php,numbers=none]
+// app/Services/ApoliceService.php: depende da interface
+public function __construct(private readonly CalculadoraPremio $calculadora) {}
+
+// app/Providers/AppServiceProvider.php: escolhe a implementação
+$this->app->bind(CalculadoraPremio::class, CalculadoraPremioViagem::class);
+\end{lstlisting}
+
+\subsection{Clean Code}
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}p{3.2cm}X@{}}
+\toprule
+Prática & Onde aparece no código \\
+\midrule
+Nomes do negócio &
+  Classes e métodos usam o vocabulário do seguro: \texttt{ApoliceService::criar},
+  \texttt{Segurado::cpfFormatado}, \texttt{Metricas::sinistralidade}, \texttt{Plano::diariaCentavos}. \\
+\addlinespace
+Métodos curtos &
+  \texttt{ApoliceService::criar} delega para \texttt{salvarSegurado}, \texttt{premio} e
+  \texttt{gerarNumero}, cada um com uma tarefa. \\
+\addlinespace
+Sem números mágicos &
+  Preços e fatores ficam nos enums (\arq{Plano}, \arq{Destino}); limites em constantes
+  (\texttt{CotacaoRequest::VIGENCIA\_MAXIMA\_DIAS}, \texttt{ApoliceService::POR\_PAGINA}). \\
+\addlinespace
+Fórmula em um só lugar &
+  Todas as contas da dashboard estão em \arq{app/Services/Dashboard/Metricas.php}. \\
+\addlinespace
+Controller enxuto &
+  \arq{ApoliceController} tem métodos de uma ou duas linhas; a validação fica nos Form Requests. \\
+\addlinespace
+Erros centralizados &
+  \arq{bootstrap/app.php} padroniza as respostas de erro da API em JSON e em português. \\
+\addlinespace
+Testes legíveis &
+  Os nomes dos testes descrevem a regra, por exemplo
+  \texttt{test\_apolice\_cancelada\_so\_pode\_ser\_reativada}. \\
+\addlinespace
+Frontend &
+  Componentes de tela não chamam \texttt{fetch}: usam \arq{src/api/apolices.js} e os hooks
+  (\texttt{useApolice}, \texttt{useOpcoes}, \texttt{useDashboard}); a formatação fica em
+  \arq{src/utils/format.js}. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+% =====================================================================
+\section{Diferenciais}
+
+\subsection{Dashboard para o time de vendas e marketing}
+
+Além do CRUD pedido, a dashboard transforma os dados das apólices em informação para decidir.
+Algumas perguntas que ela responde:
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}XX@{}}
+\toprule
+Pergunta do time & Onde responder \\
+\midrule
+Estamos vendendo mais do que no ano passado? & Visão geral: KPIs com variação e prêmio por mês contra o ano anterior \\
+Qual canal vende mais e com maior ticket? & Comercial: vendas por canal \\
+Qual plano o cliente prefere? & Comercial: mix de planos \\
+Em que etapa da cotação perdemos o cliente? & Marketing: funil com a etapa de maior abandono \\
+Qual campanha deu retorno? & Marketing: ROI por campanha \\
+O site no celular converte bem? & Marketing: conversão por dispositivo \\
+Com quanta antecedência o cliente compra? & Marketing: antecedência da compra (ajuda a planejar campanhas) \\
+Algum destino dá prejuízo? & Sinistros: sinistralidade por destino contra a meta de 60\% \\
+O cliente está satisfeito com o atendimento? & Sinistros e atendimento: NPS e SLA por canal \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\subsection{Diferenciais técnicos}
+
+\begin{itemize}
+  \item \textbf{Cotação em tempo real:} o prêmio aparece enquanto o formulário é preenchido.
+  \item \textbf{Regras reais de seguro:} prêmio por plano, destino, dias e idade; CPF validado;
+        limites de vigência; exclusão lógica para auditoria.
+  \item \textbf{Dinheiro em centavos}, sem erro de arredondamento.
+  \item \textbf{Testes automatizados} (Seção~\ref{sec:testes}) e \textbf{Docker} para subir tudo
+        com um comando.
+  \item \textbf{Dados de demonstração} realistas: 24 meses de histórico com sazonalidade.
+  \item \textbf{Desenho de solução na Azure} com Static Web Apps, App Service, MySQL e Key Vault.
+\end{itemize}
 
 % =====================================================================
 \section{API}
@@ -473,9 +606,9 @@ Se o usuário continuar digitando, a requisição anterior é cancelada com \tex
 evitando que uma resposta antiga substitua a mais recente. A busca da lista usa a mesma técnica.
 
 % =====================================================================
-\section{Testes}
+\section{Testes}\label{sec:testes}
 
-São 37 testes automatizados (PHPUnit), executados com \texttt{php artisan test} na pasta
+São 38 testes automatizados (PHPUnit), executados com \texttt{php artisan test} na pasta
 \arq{backend}.
 
 \begin{itemize}
@@ -486,7 +619,7 @@ São 37 testes automatizados (PHPUnit), executados com \texttt{php artisan test}
         do segurado, busca e paginação, edição com recálculo, regra da apólice cancelada, exclusão
         lógica, mensagens de validação, limites da vigência, cotação e resumo.
   \item \textbf{Da dashboard:} \arq{DashboardApiTest} verifica os indicadores de cada visão, o funil,
-        o ROI de campanha, a sinistralidade e o seeder de demonstração.
+        o ROI de campanha, a sinistralidade e o seeder de demonstração (inclusive rodando duas vezes).
 \end{itemize}
 
 Nos testes de API a data atual é fixada com \texttt{Carbon::setTestNow('2026-09-20')}, para que o
@@ -500,12 +633,16 @@ resultado não dependa do dia em que o teste é executado, e o banco é recriado
 
 \begin{lstlisting}[style=txt]
 docker compose up -d --build
-docker compose exec api php artisan db:seed     (dados de exemplo)
+docker compose exec api php artisan db:seed     (dados de exemplo e da dashboard)
 \end{lstlisting}
 
-Aplicação em \texttt{http://localhost:3000} e API em \texttt{http://localhost:8000/api}.
+Aplicação em \texttt{http://localhost:3000}, dashboard em \texttt{http://localhost:3000/dashboard}
+e API em \texttt{http://localhost:8000/api}.
 
 \subsection{Na Azure}
+
+\textbf{Situação:} o desenho da solução está pronto (Figura abaixo e \arq{docs/arquitetura-azure.svg});
+a publicação dos recursos ainda será feita. O passo a passo está no README.
 
 \begin{center}
 \begin{tikzpicture}[
@@ -539,6 +676,7 @@ Aplicação em \texttt{http://localhost:3000} e API em \texttt{http://localhost:
   \item Endosso: histórico das alterações de cada apólice.
   \item Infraestrutura como código (Bicep).
   \item Testes automatizados no frontend.
+  \item Dashboard: filtros por canal, plano e destino e tabela de métricas pré-calculadas quando o volume crescer.
 \end{itemize}
 
 \end{document}

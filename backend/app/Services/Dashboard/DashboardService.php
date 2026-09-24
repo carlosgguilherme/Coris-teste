@@ -45,19 +45,27 @@ class DashboardService
         ];
     }
 
+    /** Marketing: a campanha converteu e o investimento valeu a pena? */
     public function marketing(Periodo $periodo): array
     {
+        $campanhas = $this->campanhas($periodo);
+
         return [
+            'kpis' => $this->indicadoresDeMarketing($periodo, $campanhas),
             'funil' => $this->funil($periodo),
-            'campanhas' => $this->campanhas($periodo),
-            'dispositivos' => $this->dispositivos($periodo),
-            'destinos' => $this->porDestino($periodo),
+            'porCanal' => $this->conversaoPorCanal($periodo),
+            'campanhas' => $campanhas,
             'antecedencia' => $this->antecedenciaDaCompra($periodo),
         ];
     }
 
+    /** Comercial: quanto vendemos, por onde e o quê. */
     public function comercial(Periodo $periodo): array
     {
+        $atual = $this->vendas($periodo);
+        $anterior = $this->vendas($periodo->anterior());
+        $totalPremio = $atual['premioEmitidoCentavos'];
+
         $canais = $this->apolicesEmitidas($periodo)->toBase()
             ->leftJoin('canais', 'canais.id', '=', 'apolices.canal_id')
             ->groupBy('canais.nome')
@@ -69,6 +77,7 @@ class DashboardService
                 'apolices' => (int) $linha->apolices,
                 'premioCentavos' => (int) $linha->premio,
                 'ticketMedioCentavos' => Metricas::ticketMedio((int) $linha->premio, (int) $linha->apolices),
+                'participacao' => Metricas::participacao((int) $linha->premio, $totalPremio),
             ]);
 
         $planos = $this->apolicesEmitidas($periodo)->toBase()
@@ -84,7 +93,12 @@ class DashboardService
             ->sortByDesc('apolices')
             ->values();
 
-        return ['canais' => $canais, 'planos' => $planos];
+        return [
+            'kpis' => collect($atual)->map(fn ($valor, $chave) => ['valor' => $valor, 'anterior' => $anterior[$chave]])->all(),
+            'canais' => $canais,
+            'destinos' => $this->porDestino($periodo),
+            'planos' => $planos,
+        ];
     }
 
     public function sinistros(Periodo $periodo): array
@@ -169,46 +183,121 @@ class DashboardService
         ]);
     }
 
+    /** Cotações, conversão e apólices por canal de venda. */
+    private function conversaoPorCanal(Periodo $periodo): Collection
+    {
+        return Cotacao::query()->toBase()
+            ->join('canais', 'canais.id', '=', 'cotacoes.canal_id')
+            ->whereBetween('cotacoes.created_at', $periodo->intervalo())
+            ->groupBy('canais.nome')
+            ->selectRaw("canais.nome as canal, COUNT(*) as total, SUM(CASE WHEN status = 'convertida' THEN 1 ELSE 0 END) as convertidas")
+            ->get()
+            ->map(fn ($linha) => [
+                'canal' => $linha->canal,
+                'cotacoes' => (int) $linha->total,
+                'apolices' => (int) $linha->convertidas,
+                'conversao' => Metricas::conversao((int) $linha->convertidas, (int) $linha->total),
+            ])
+            ->sortByDesc('conversao')
+            ->values();
+    }
+
+    /**
+     * Campanhas que estiveram no ar no período. Os números de cada uma consideram
+     * a campanha inteira, do início ao fim, para avaliar se o investimento valeu.
+     */
     private function campanhas(Periodo $periodo): Collection
     {
-        $cotacoes = Cotacao::whereBetween('created_at', $periodo->intervalo())
-            ->whereNotNull('campanha_id')
-            ->groupBy('campanha_id')
-            ->selectRaw("campanha_id, COUNT(*) as total, SUM(CASE WHEN status = 'convertida' THEN 1 ELSE 0 END) as convertidas")
-            ->get()
-            ->keyBy('campanha_id');
+        $campanhas = Campanha::where('inicio', '<=', $periodo->fim->toDateString())
+            ->where('fim', '>=', $periodo->inicio->toDateString())
+            ->orderByDesc('inicio')
+            ->get();
 
-        $premios = $this->apolicesEmitidas($periodo)->toBase()
-            ->whereNotNull('campanha_id')
+        $cotacoes = Cotacao::whereIn('campanha_id', $campanhas->pluck('id'))
+            ->get(['campanha_id', 'status', 'created_at'])
+            ->groupBy('campanha_id');
+
+        $premios = Apolice::query()->toBase()
+            ->whereIn('campanha_id', $campanhas->pluck('id'))
+            ->where('status', '!=', StatusApolice::Cancelada)
             ->groupBy('campanha_id')
             ->selectRaw('campanha_id, SUM(valor_premio_centavos) as premio')
             ->pluck('premio', 'campanha_id');
 
-        return Campanha::whereIn('id', $cotacoes->keys())
-            ->orderBy('inicio')
-            ->get()
-            ->map(fn (Campanha $campanha) => [
+        return $campanhas->map(function (Campanha $campanha) use ($cotacoes, $premios) {
+            $daCampanha = $cotacoes[$campanha->id] ?? collect();
+            $convertidas = $daCampanha->where('status', StatusCotacao::Convertida)->count();
+            $premio = (int) ($premios[$campanha->id] ?? 0);
+
+            return [
+                'id' => $campanha->id,
                 'nome' => $campanha->nome,
                 'utmSource' => $campanha->utm_source,
-                'cotacoes' => (int) $cotacoes[$campanha->id]->total,
-                'conversao' => Metricas::conversao((int) $cotacoes[$campanha->id]->convertidas, (int) $cotacoes[$campanha->id]->total),
-                'premioCentavos' => (int) ($premios[$campanha->id] ?? 0),
+                'inicio' => $campanha->inicio->toDateString(),
+                'fim' => $campanha->fim->toDateString(),
+                'cotacoes' => $daCampanha->count(),
+                'apolices' => $convertidas,
+                'conversao' => Metricas::conversao($convertidas, $daCampanha->count()),
+                'premioCentavos' => $premio,
                 'investimentoCentavos' => $campanha->investimento_centavos,
-                'roi' => Metricas::roi((int) ($premios[$campanha->id] ?? 0), $campanha->investimento_centavos),
-            ]);
+                'roi' => Metricas::roi($premio, $campanha->investimento_centavos),
+                'custoPorApoliceCentavos' => Metricas::custoPorApolice($campanha->investimento_centavos, $convertidas),
+                'semanas' => $this->semanasDaCampanha($campanha, $daCampanha),
+            ];
+        });
     }
 
-    private function dispositivos(Periodo $periodo): Collection
+    /** Cotações e apólices de cada semana em que a campanha esteve no ar. */
+    private function semanasDaCampanha(Campanha $campanha, Collection $cotacoes): Collection
     {
-        return Cotacao::whereBetween('created_at', $periodo->intervalo())
-            ->groupBy('device')
-            ->selectRaw("device, COUNT(*) as total, SUM(CASE WHEN status = 'convertida' THEN 1 ELSE 0 END) as convertidas")
-            ->get()
-            ->map(fn ($linha) => [
-                'device' => $linha->device === 'mobile' ? 'Celular' : 'Computador',
-                'cotacoes' => (int) $linha->total,
-                'conversao' => Metricas::conversao((int) $linha->convertidas, (int) $linha->total),
+        $porSemana = $cotacoes->groupBy(fn (Cotacao $cotacao) => $cotacao->created_at->startOfWeek()->toDateString());
+        $semana = $campanha->inicio->copy()->startOfWeek();
+        $ultima = $campanha->fim->min(now())->startOfWeek();
+        $semanas = collect();
+
+        while ($semana->lte($ultima)) {
+            $daSemana = $porSemana[$semana->toDateString()] ?? collect();
+            $semanas->push([
+                'semana' => $semana->toDateString(),
+                'cotacoes' => $daSemana->count(),
+                'apolices' => $daSemana->where('status', StatusCotacao::Convertida)->count(),
             ]);
+            $semana->addWeek();
+        }
+
+        return $semanas;
+    }
+
+    /** Números do topo da aba Marketing. */
+    private function indicadoresDeMarketing(Periodo $periodo, Collection $campanhas): array
+    {
+        $cotacoes = Cotacao::whereBetween('created_at', $periodo->intervalo());
+        $total = (clone $cotacoes)->count();
+        $investimento = $campanhas->sum('investimentoCentavos');
+        $premio = $campanhas->sum('premioCentavos');
+
+        return [
+            'cotacoes' => $total,
+            'conversao' => Metricas::conversao($cotacoes->where('status', StatusCotacao::Convertida)->count(), $total),
+            'investimentoCentavos' => $investimento,
+            'premioCampanhasCentavos' => $premio,
+            'roi' => Metricas::roi($premio, $investimento),
+            'custoPorApoliceCentavos' => Metricas::custoPorApolice($investimento, $campanhas->sum('apolices')),
+        ];
+    }
+
+    /** Números do topo da aba Comercial. */
+    private function vendas(Periodo $periodo): array
+    {
+        $premio = (int) $this->apolicesEmitidas($periodo)->sum('valor_premio_centavos');
+        $apolices = $this->apolicesEmitidas($periodo)->count();
+
+        return [
+            'premioEmitidoCentavos' => $premio,
+            'apolices' => $apolices,
+            'ticketMedioCentavos' => Metricas::ticketMedio($premio, $apolices),
+            'canceladas' => Apolice::whereBetween('created_at', $periodo->intervalo())->where('status', StatusApolice::Cancelada)->count(),
+        ];
     }
 
     private function porDestino(Periodo $periodo): Collection
@@ -216,12 +305,13 @@ class DashboardService
         return $this->apolicesEmitidas($periodo)->toBase()
             ->groupBy('destino')
             ->selectRaw('destino, COUNT(*) as apolices, SUM(valor_premio_centavos) as premio')
-            ->orderByDesc('apolices')
+            ->orderByDesc('premio')
             ->get()
             ->map(fn ($linha) => [
                 'destino' => Destino::from($linha->destino)->label(),
                 'apolices' => (int) $linha->apolices,
                 'premioCentavos' => (int) $linha->premio,
+                'ticketMedioCentavos' => Metricas::ticketMedio((int) $linha->premio, (int) $linha->apolices),
             ]);
     }
 

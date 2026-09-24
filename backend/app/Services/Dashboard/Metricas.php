@@ -55,6 +55,18 @@ class Metricas
         return $investimentoCentavos > 0 ? round(($premioCentavos - $investimentoCentavos) / $investimentoCentavos, 4) : null;
     }
 
+    /** Quanto a campanha gastou para vender cada apólice: investimento ÷ apólices vendidas. */
+    public static function custoPorApolice(int $investimentoCentavos, int $apolices): ?int
+    {
+        return $apolices > 0 ? intdiv($investimentoCentavos, $apolices) : null;
+    }
+
+    /** Parte de um total: 0,25 = 25%. */
+    public static function participacao(int $parte, int $total): ?float
+    {
+        return self::razao($parte, $total);
+    }
+
     /** % de promotores (nota 9 e 10) − % de detratores (nota 0 a 6), de −100 a 100. */
     public static function nps(int $promotores, int $detratores, int $respostas): ?int
     {

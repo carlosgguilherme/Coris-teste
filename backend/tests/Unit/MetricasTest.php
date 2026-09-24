@@ -36,6 +36,14 @@ class MetricasTest extends TestCase
         $this->assertNull(Metricas::roi(50000, 0));
     }
 
+    public function test_custo_por_apolice_e_participacao(): void
+    {
+        // campanha de R$ 1.000 que vendeu 4 apólices: R$ 250 por apólice
+        $this->assertSame(25000, Metricas::custoPorApolice(100000, 4));
+        $this->assertNull(Metricas::custoPorApolice(100000, 0));
+        $this->assertSame(0.25, Metricas::participacao(250, 1000));
+    }
+
     public function test_nps_e_promotores_menos_detratores(): void
     {
         // 6 promotores, 2 neutros e 2 detratores em 10 respostas: 60% - 20% = 40

@@ -243,6 +243,11 @@ class DashboardSeeder extends Seeder
             ? $contexto['data']->copy()->subMinutes(mt_rand(5, 90))
             : $contexto['data']->copy()->subDays(mt_rand(0, 20))->subMinutes(mt_rand(0, 600));
 
+        // Cotação de campanha só existe enquanto a campanha está no ar
+        if ($contexto['campanha'] && $criadaEm->lt(Carbon::parse($contexto['campanha']['inicio']))) {
+            $criadaEm = Carbon::parse($contexto['campanha']['inicio'])->setTime(9, 0);
+        }
+
         return [
             'codigo' => $this->uuid(),
             'canal_id' => $contexto['canal_id'],

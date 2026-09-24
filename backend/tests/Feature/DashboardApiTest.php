@@ -72,18 +72,43 @@ class DashboardApiTest extends TestCase
 
         $this->getJson('/api/dashboard/marketing?periodo=30d')
             ->assertJsonPath('campanhas.0.nome', 'Férias de Julho')
+            ->assertJsonPath('campanhas.0.cotacoes', 1)
+            ->assertJsonPath('campanhas.0.apolices', 1)
             ->assertJsonPath('campanhas.0.conversao', 1)
-            ->assertJsonPath('campanhas.0.roi', 1.5);
+            ->assertJsonPath('campanhas.0.roi', 1.5)
+            ->assertJsonPath('campanhas.0.custoPorApoliceCentavos', 100000)
+            ->assertJsonPath('kpis.investimentoCentavos', 100000)
+            ->assertJsonPath('kpis.roi', 1.5);
     }
 
-    public function test_comercial_agrupa_por_canal_e_plano(): void
+    public function test_comercial_mostra_vendas_por_canal_destino_e_plano(): void
     {
         $this->apolice(premio: 30000, emitidaEm: '2026-09-10', canal: 'agencia');
         $this->apolice(premio: 50000, emitidaEm: '2026-09-11', canal: 'agencia');
+        $this->apolice(premio: 20000, emitidaEm: '2026-09-12', canal: 'site');
+        $this->apolice(premio: 99999, emitidaEm: '2026-09-12', status: 'cancelada');
 
         $this->getJson('/api/dashboard/comercial?periodo=30d')
-            ->assertJsonPath('canais.0', ['canal' => 'Agências de viagem', 'apolices' => 2, 'premioCentavos' => 80000, 'ticketMedioCentavos' => 40000])
+            ->assertJsonPath('kpis.premioEmitidoCentavos.valor', 100000)
+            ->assertJsonPath('kpis.apolices.valor', 3)
+            ->assertJsonPath('kpis.canceladas.valor', 1)
+            ->assertJsonPath('canais.0', ['canal' => 'Agências de viagem', 'apolices' => 2, 'premioCentavos' => 80000, 'ticketMedioCentavos' => 40000, 'participacao' => 0.8])
+            ->assertJsonPath('destinos.0.destino', 'Europa')
+            ->assertJsonPath('destinos.0.premioCentavos', 100000)
             ->assertJsonPath('planos.0.plano', 'Plus');
+    }
+
+    public function test_marketing_mostra_a_conversao_por_canal(): void
+    {
+        $this->cotacao('convertida', $this->apolice(premio: 30000, emitidaEm: '2026-09-15'));
+        $this->cotacao('abandonada');
+        $this->cotacao('abandonada');
+        $this->cotacao('abandonada');
+
+        $this->getJson('/api/dashboard/marketing?periodo=30d')
+            ->assertJsonPath('kpis.cotacoes', 4)
+            ->assertJsonPath('kpis.conversao', 0.25)
+            ->assertJsonPath('porCanal.0', ['canal' => 'Site', 'cotacoes' => 4, 'apolices' => 1, 'conversao' => 0.25]);
     }
 
     public function test_sinistralidade_usa_o_custo_dos_sinistros_sobre_o_premio_ganho(): void

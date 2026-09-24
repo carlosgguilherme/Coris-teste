@@ -227,8 +227,8 @@ class DashboardSeeder extends Seeder
                 Plano::from($plano), Destino::from($destino), $inicio, $fim, Carbon::parse($segurado['nascimento']),
             ),
             'status' => mt_rand(1, 100) <= 4 ? 'cancelada' : 'ativa',
-            'created_at' => $emissao,
-            'updated_at' => $emissao,
+            'created_at' => $emissao->toDateTimeString(),
+            'updated_at' => $emissao->toDateTimeString(),
         ];
     }
 
@@ -255,37 +255,44 @@ class DashboardSeeder extends Seeder
             'device' => $contexto['device'],
             'status' => $status->value,
             'etapa_abandono' => $status === StatusCotacao::Abandonada ? $this->sortear(self::ETAPA_ABANDONO) : null,
-            'created_at' => $criadaEm,
-            'updated_at' => $criadaEm,
+            'created_at' => $criadaEm->toDateTimeString(),
+            'updated_at' => $criadaEm->toDateTimeString(),
             'utm_source' => $contexto['campanha']['utm_source'] ?? null,
         ];
     }
 
-    /** Grava as cotações e um evento para cada etapa do funil que o cliente passou. */
+    /**
+     * Grava as cotações e um evento para cada etapa do funil que o cliente passou.
+     * Vai em lotes de 1.000 cotações para não acumular tudo na memória.
+     */
     private function inserirCotacoes(array $cotacoes): void
     {
         $proximoId = (int) DB::table('cotacoes')->max('id') + 1;
         $etapas = array_map(fn (StatusCotacao $etapa) => $etapa->value, StatusCotacao::etapasDoFunil());
-        $eventos = [];
 
-        foreach ($cotacoes as $indice => $cotacao) {
-            $cotacoes[$indice]['id'] = $proximoId++;
-            $ultimaEtapa = $cotacao['etapa_abandono'] ?? StatusCotacao::Convertida->value;
+        foreach (array_chunk($cotacoes, 1000) as $lote) {
+            $eventos = [];
 
-            foreach (array_slice($etapas, 0, array_search($ultimaEtapa, $etapas) + 1) as $ordem => $etapa) {
-                $eventos[] = [
-                    'cotacao_id' => $cotacoes[$indice]['id'],
-                    'etapa' => $etapa,
-                    'utm_source' => $cotacao['utm_source'],
-                    'device' => $cotacao['device'],
-                    'ocorrido_em' => $cotacao['created_at']->copy()->addMinutes($ordem * 2),
-                ];
+            foreach ($lote as $indice => $cotacao) {
+                $lote[$indice]['id'] = $proximoId++;
+                $ultimaEtapa = $cotacao['etapa_abandono'] ?? StatusCotacao::Convertida->value;
+                $inicio = strtotime($cotacao['created_at']);
+
+                foreach (array_slice($etapas, 0, array_search($ultimaEtapa, $etapas) + 1) as $ordem => $etapa) {
+                    $eventos[] = [
+                        'cotacao_id' => $lote[$indice]['id'],
+                        'etapa' => $etapa,
+                        'utm_source' => $cotacao['utm_source'],
+                        'device' => $cotacao['device'],
+                        'ocorrido_em' => date('Y-m-d H:i:s', $inicio + $ordem * 120),
+                    ];
+                }
+                unset($lote[$indice]['utm_source']);
             }
-            unset($cotacoes[$indice]['utm_source']);
-        }
 
-        $this->inserir('cotacoes', $cotacoes);
-        $this->inserir('funil_eventos', $eventos);
+            $this->inserir('cotacoes', $lote);
+            $this->inserir('funil_eventos', $eventos);
+        }
     }
 
     private function gerarSinistros(array $apolices): array
@@ -314,8 +321,8 @@ class DashboardSeeder extends Seeder
                 'data_aviso' => $aviso->toDateString(),
                 'valor_reclamado_centavos' => $reclamado,
                 ...$this->situacaoDoSinistro($aviso, $reclamado),
-                'created_at' => $aviso,
-                'updated_at' => $aviso,
+                'created_at' => $aviso->toDateTimeString(),
+                'updated_at' => $aviso->toDateTimeString(),
             ];
         }
 
@@ -365,12 +372,12 @@ class DashboardSeeder extends Seeder
                     'apolice_id' => $apolice['id'],
                     'canal' => $canal,
                     'tipo' => self::TIPOS_ATENDIMENTO[mt_rand(0, count(self::TIPOS_ATENDIMENTO) - 1)],
-                    'inicio' => $quando,
+                    'inicio' => $quando->toDateTimeString(),
                     'tempo_espera_seg' => $espera,
                     'dentro_sla' => $espera <= 180,
                     'nps' => mt_rand(1, 100) <= 70 ? $this->notaNps($espera) : null,
-                    'created_at' => $quando,
-                    'updated_at' => $quando,
+                    'created_at' => $quando->toDateTimeString(),
+                    'updated_at' => $quando->toDateTimeString(),
                 ];
             }
         }

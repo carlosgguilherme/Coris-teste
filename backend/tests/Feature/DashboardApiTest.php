@@ -125,6 +125,16 @@ class DashboardApiTest extends TestCase
         }
     }
 
+    public function test_seeder_pode_rodar_de_novo_sem_duplicar_os_dados(): void
+    {
+        $this->seed(DashboardSeeder::class);
+        $apolices = Apolice::count();
+
+        $this->seed(DashboardSeeder::class);
+
+        $this->assertSame($apolices, Apolice::count());
+    }
+
     private function apolice(int $premio, string $emitidaEm, string $status = 'ativa', string $canal = 'site', ?Campanha $campanha = null, string $inicio = '2026-10-01', string $fim = '2026-10-10'): Apolice
     {
         $apolice = Apolice::create([

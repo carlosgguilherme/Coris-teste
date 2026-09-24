@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\Apolice;
 use App\Services\ApoliceService;
 use Illuminate\Database\Seeder;
 
@@ -10,6 +11,11 @@ class DatabaseSeeder extends Seeder
     public function run(ApoliceService $service): void
     {
         $this->call([CanaisSeeder::class, DashboardSeeder::class]);
+
+        // Apólices de exemplo (cadastradas pela tela, sem canal): só na primeira vez
+        if (Apolice::whereNull('canal_id')->exists()) {
+            return;
+        }
 
         $data = fn (int $dias) => today()->addDays($dias)->toDateString();
 

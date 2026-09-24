@@ -78,6 +78,18 @@ class DashboardSeeder extends Seeder
 
     public function run(): void
     {
+        if (DB::table('cotacoes')->exists()) {
+            $this->command?->warn('Os dados da dashboard já existem. Para gerar de novo: php artisan migrate:fresh --seed');
+
+            return;
+        }
+
+        // Tudo ou nada: se algo falhar no meio, nenhum dado fica pela metade
+        DB::transaction(fn () => $this->gerar());
+    }
+
+    private function gerar(): void
+    {
         mt_srand(self::SEMENTE);
 
         $canais = Canal::pluck('id', 'codigo');

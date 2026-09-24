@@ -1,6 +1,6 @@
-# Seguro Viagem - Gestão de Apólices
+# Mariano Seguros - Gestão de Apólices de Seguro Viagem
 
-Seguro Viagem é uma aplicação web para **gestão de apólices de seguro viagem**, desenvolvida como teste técnico, utilizando **Laravel 12**, **React 18** e **MySQL**, com desenho de solução na **Azure**. O foco foi entregar o CRUD completo com regras reais do negócio de seguros (cálculo do prêmio, vigência, exclusão lógica), código organizado seguindo **SOLID** e **Clean Code** e testes automatizados.
+Mariano Seguros é uma aplicação web para **gestão de apólices de seguro viagem** de uma seguradora fictícia, desenvolvida como teste técnico, utilizando **Laravel 12**, **React 18** e **MySQL**, com desenho de solução na **Azure**. O foco foi entregar o CRUD completo com regras reais do negócio de seguros (cálculo do prêmio, vigência, exclusão lógica), código organizado seguindo **SOLID** e **Clean Code** e testes automatizados.
 
 ---
 
@@ -271,7 +271,7 @@ Erros de validação voltam com status `422` e a mensagem por campo.
 
 ## Deploy na Azure
 
-Feito pelo Portal da Azure, no Resource Group `rg-coris-seguros` (Brazil South).
+Feito pelo Portal da Azure, no Resource Group `rg-mariano-seguros` (Brazil South).
 
 1. **Azure Database for MySQL - Flexible Server**
    - Criar o servidor e o banco `coris_seguros`

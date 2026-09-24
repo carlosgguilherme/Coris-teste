@@ -20,10 +20,10 @@
 
   <rect width="1200" height="690" fill="#ffffff"/>
 
-  <text x="40" y="46" font-size="22" font-weight="700" fill="#1b2533">Seguro Viagem · Gestão de Apólices — arquitetura na Azure</text>
+  <text x="40" y="46" font-size="22" font-weight="700" fill="#1b2533">Mariano Seguros · Gestão de Apólices — arquitetura na Azure</text>
 
   <rect x="280" y="80" width="890" height="580" rx="14" fill="#f5f9fd" stroke="#0078d4" stroke-width="1.5" stroke-dasharray="8 6"/>
-  <text x="300" y="110" font-size="13" font-weight="700" fill="#0078d4">AZURE · Resource Group rg-coris-seguros · Brazil South</text>
+  <text x="300" y="110" font-size="13" font-weight="700" fill="#0078d4">AZURE · Resource Group rg-mariano-seguros · Brazil South</text>
 
   <rect class="externo" x="40" y="150" width="170" height="90" rx="10"/>
   <text class="titulo" x="125" y="188" text-anchor="middle">Usuário</text>

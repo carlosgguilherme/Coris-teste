@@ -19,7 +19,7 @@ services:
   api:
     build: ./backend
     environment:
-      APP_NAME: "Seguro Viagem"
+      APP_NAME: "Mariano Seguros"
       APP_ENV: local
       APP_DEBUG: "false"
       APP_KEY: base64:Z3VhcmRhLWNoYXZlLWxvY2FsLWRvLWRvY2tlci0zMmI=

@@ -41,7 +41,7 @@ export default function Dashboard() {
       <div className="page-header">
         <div>
           <h1>Dashboard</h1>
-          <p className="muted">Vendas, marketing, sinistros e atendimento em um só lugar.</p>
+          <p className="muted"></p>
         </div>
         <label className="filtro-periodo">
           <span className="muted">Período</span>

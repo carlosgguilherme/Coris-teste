@@ -298,7 +298,7 @@ Feito pelo Portal da Azure, no Resource Group `rg-coris-seguros` (Brazil South).
 
 ## Documentação técnica
 
-A documentação completa do código, em LaTeX, está em [`docs/latex/documentacao.pdf`](docs/latex/documentacao.pdf) (fonte em `docs/latex/documentacao.tex`). Para gerar o PDF de novo:
+O relatório técnico do projeto, em LaTeX no formato ABNT, está em [`docs/latex/documentacao.pdf`](docs/latex/documentacao.pdf) (fonte em `docs/latex/documentacao.tex` e imagens em `docs/latex/imagens`). Ele descreve requisitos, arquitetura, modelo de dados, regras de negócio, SOLID e Clean Code, dashboard, testes e implantação. Para gerar o PDF de novo:
 
 ```bash
 cd docs/latex

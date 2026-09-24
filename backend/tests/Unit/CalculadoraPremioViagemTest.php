@@ -14,7 +14,7 @@ class CalculadoraPremioViagemTest extends TestCase
     #[DataProvider('cenarios')]
     public function test_calcula_premio_por_plano_destino_dias_e_idade(Plano $plano, Destino $destino, string $nascimento, int $esperado): void
     {
-        $premio = (new CalculadoraPremioViagem())->calcular(
+        $premio = (new CalculadoraPremioViagem)->calcular(
             $plano,
             $destino,
             Carbon::parse('2026-10-01'),

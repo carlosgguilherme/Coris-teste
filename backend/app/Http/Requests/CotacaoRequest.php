@@ -18,7 +18,7 @@ class CotacaoRequest extends FormRequest
     {
         return [
             'seguradoNome' => ['required', 'string', 'min:3', 'max:120'],
-            'seguradoCpf' => ['required', new Cpf()],
+            'seguradoCpf' => ['required', new Cpf],
             'seguradoEmail' => ['required', 'email', 'max:150'],
             'seguradoNascimento' => ['required', 'date_format:Y-m-d', 'before_or_equal:today'],
             'destino' => ['required', Rule::in(array_column(Destino::cases(), 'value'))],

@@ -18,9 +18,7 @@ class ApoliceService
 {
     public const POR_PAGINA = 10;
 
-    public function __construct(private readonly CalculadoraPremio $calculadora)
-    {
-    }
+    public function __construct(private readonly CalculadoraPremio $calculadora) {}
 
     public function listar(?string $busca, ?string $status): LengthAwarePaginator
     {

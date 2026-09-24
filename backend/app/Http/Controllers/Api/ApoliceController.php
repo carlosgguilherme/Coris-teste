@@ -15,9 +15,7 @@ use Illuminate\Http\Response;
 
 class ApoliceController extends Controller
 {
-    public function __construct(private readonly ApoliceService $service)
-    {
-    }
+    public function __construct(private readonly ApoliceService $service) {}
 
     public function index(Request $request): AnonymousResourceCollection
     {

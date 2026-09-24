@@ -2,10 +2,11 @@
 
 namespace App\Http\Resources;
 
+use App\Models\Apolice;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-/** @mixin \App\Models\Apolice */
+/** @mixin Apolice */
 class ApoliceResource extends JsonResource
 {
     public function toArray(Request $request): array

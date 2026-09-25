@@ -36,7 +36,7 @@ Seguro Viagem é uma aplicação web para **gestão de apólices de seguro viage
 - **App Service (Linux)** roda a API Laravel
 - **Azure Database for MySQL** guarda segurados e apólices
 - **Key Vault** guarda a senha do banco e a `APP_KEY`, lidas pelo App Service com **Managed Identity**
-- **GitHub Actions** faz o deploy a cada push (workflow gerado pelo Deployment Center do Azure)
+- **GitHub Actions** faz o deploy a cada push (workflow `.github/workflows/azure-api.yml`)
 
 ---
 
@@ -279,12 +279,14 @@ Feito pelo Portal da Azure, no Resource Group `rg-coris-seguros` (Brazil South).
 2. **App Service** (Linux, PHP 8.3)
    - Em *Environment variables*: `APP_KEY`, `APP_ENV=production`, `APP_DEBUG=false`, `DB_CONNECTION=mysql`, `DB_HOST`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD` e `MYSQL_ATTR_SSL_CA=/etc/ssl/certs/ca-certificates.crt`
    - Em *Configuration > Startup Command*: `bash /home/site/wwwroot/azure/startup.sh` (aponta o nginx para a pasta `public` e roda as migrations)
-   - Em *Deployment Center*: conectar o GitHub (pasta `backend`)
+   - Baixar o *publish profile* e cadastrar no GitHub o secret `AZURE_WEBAPP_PUBLISH_PROFILE` e a variável `AZURE_WEBAPP_NAME`; o workflow `.github/workflows/azure-api.yml` publica a pasta `backend` a cada push na `main`
 3. **Key Vault** (opcional)
    - Guardar a senha do banco e usar referência `@Microsoft.KeyVault(...)` nas variáveis do App Service, com Managed Identity
 4. **Static Web App**
    - Conectar o GitHub, app location `frontend`, output `dist`
    - Variável de build `VITE_API_URL` com a URL do App Service + `/api`
+
+**Situação atual:** o deploy está preparado (scripts, workflow e passos acima), mas não foi concluído. Na assinatura de avaliação gratuita usada, a Azure bloqueou a criação por cota: App Service (planos B1 e F1) com limite 0, tamanhos de VM indisponíveis e falha no provisionamento do MySQL. Com uma assinatura sem essas restrições, basta seguir os passos acima. Até lá, o projeto roda completo com `docker compose up -d --build`.
 
 ---
 

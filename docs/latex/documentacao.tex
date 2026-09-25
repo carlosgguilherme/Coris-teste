@@ -632,8 +632,13 @@ código. A publicação é feita pelo GitHub Actions a cada atualização do rep
   \fonte{elaborado pelo autor (2026).}
 \end{figure}
 
-Até a data deste relatório, o desenho da solução está concluído e os passos de publicação estão
-documentados no repositório; a criação dos recursos na Azure é a etapa seguinte do projeto.
+Os arquivos de publicação estão prontos no repositório: o script de inicialização e a
+configuração do nginx para o App Service e um \emph{workflow} do GitHub Actions que publica a API
+a cada alteração na \emph{branch} principal. A publicação foi tentada, mas a assinatura de
+avaliação gratuita da Azure bloqueou a criação dos recursos por falta de cota (limite zero para os
+planos B1 e F1 do App Service, tamanhos de máquina virtual indisponíveis e falha no provisionamento
+do MySQL). Com uma assinatura sem essas restrições, basta seguir os passos documentados. Até lá,
+a aplicação completa é executada localmente com Docker.
 
 % =====================================================================
 \section{Considerações finais}\label{sec:conclusao}

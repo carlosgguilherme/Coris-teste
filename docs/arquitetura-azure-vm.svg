@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 640" width="1200" height="640" font-family="Segoe UI, Inter, Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="seta" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#3b4a5e"/>
+    </marker>
+    <marker id="seta-deploy" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#8a5cf6"/>
+    </marker>
+    <style>
+      .caixa { fill: #ffffff; stroke: #c7d3e0; stroke-width: 1.5; }
+      .externo { fill: #f4f6f9; stroke: #c7d3e0; stroke-width: 1.5; }
+      .faixa { fill: #0078d4; }
+      .titulo { font-size: 15px; font-weight: 700; fill: #1b2533; }
+      .sub { font-size: 12.5px; fill: #5d6b7e; }
+      .rotulo { font-size: 11.5px; fill: #3b4a5e; font-weight: 600; }
+      .linha { stroke: #3b4a5e; stroke-width: 1.6; fill: none; marker-end: url(#seta); }
+      .deploy { stroke: #8a5cf6; stroke-width: 1.6; stroke-dasharray: 6 5; fill: none; marker-end: url(#seta-deploy); }
+    </style>
+  </defs>
+
+  <rect width="1200" height="640" fill="#ffffff"/>
+
+  <text x="40" y="46" font-size="22" font-weight="700" fill="#1b2533">Coris Seguros · Gestão de Apólices — publicação atual na Azure (VM)</text>
+
+  <rect x="260" y="80" width="910" height="530" rx="14" fill="#f5f9fd" stroke="#0078d4" stroke-width="1.5" stroke-dasharray="8 6"/>
+  <text x="280" y="110" font-size="13" font-weight="700" fill="#0078d4">AZURE · Resource Group rg-coris-seguros-vm_group · East US 2</text>
+
+  <rect class="externo" x="40" y="160" width="170" height="90" rx="10"/>
+  <text class="titulo" x="125" y="198" text-anchor="middle">Usuário</text>
+  <text class="sub" x="125" y="218" text-anchor="middle">Navegador</text>
+
+  <rect class="externo" x="40" y="470" width="170" height="100" rx="10"/>
+  <text class="titulo" x="125" y="508" text-anchor="middle">GitHub</text>
+  <text class="sub" x="125" y="528" text-anchor="middle">Coris-teste</text>
+  <text class="sub" x="125" y="546" text-anchor="middle">coris-teste-dotnet</text>
+
+  <rect class="caixa" x="300" y="140" width="220" height="150" rx="10"/>
+  <rect class="faixa" x="300" y="140" width="6" height="150" rx="3"/>
+  <text class="titulo" x="320" y="172">IP público + NSG</text>
+  <text class="sub" x="320" y="196">Grupo de segurança de rede</text>
+  <text class="sub" x="320" y="218">Porta 80 · Laravel</text>
+  <text class="sub" x="320" y="238">Porta 8080 · .NET</text>
+  <text class="sub" x="320" y="258">Porta 22 · SSH</text>
+
+  <rect x="570" y="130" width="570" height="460" rx="12" fill="#ffffff" stroke="#0078d4" stroke-width="1.5"/>
+  <text class="titulo" x="590" y="160">Máquina Virtual Linux (Ubuntu 24.04)</text>
+  <text class="sub" x="590" y="180">Docker + Docker Compose · disco gerenciado guarda os dados do MySQL</text>
+
+  <text class="rotulo" x="590" y="215">Versão principal (Laravel) · porta 80</text>
+  <rect class="caixa" x="590" y="225" width="160" height="80" rx="8"/>
+  <text class="titulo" x="670" y="258" text-anchor="middle">web</text>
+  <text class="sub" x="670" y="278" text-anchor="middle">nginx + React 18</text>
+  <rect class="caixa" x="775" y="225" width="160" height="80" rx="8"/>
+  <text class="titulo" x="855" y="258" text-anchor="middle">api</text>
+  <text class="sub" x="855" y="278" text-anchor="middle">Laravel 12 · PHP 8.3</text>
+  <rect class="caixa" x="960" y="225" width="160" height="80" rx="8"/>
+  <text class="titulo" x="1040" y="258" text-anchor="middle">mysql</text>
+  <text class="sub" x="1040" y="278" text-anchor="middle">MySQL 8.0</text>
+  <path class="linha" d="M750,265 L773,265"/>
+  <path class="linha" d="M935,265 L958,265"/>
+
+  <text class="rotulo" x="590" y="360">Versão .NET · porta 8080</text>
+  <rect class="caixa" x="590" y="370" width="160" height="80" rx="8"/>
+  <text class="titulo" x="670" y="403" text-anchor="middle">web</text>
+  <text class="sub" x="670" y="423" text-anchor="middle">nginx + React 18</text>
+  <rect class="caixa" x="775" y="370" width="160" height="80" rx="8"/>
+  <text class="titulo" x="855" y="403" text-anchor="middle">api</text>
+  <text class="sub" x="855" y="423" text-anchor="middle">ASP.NET Core 8 · C#</text>
+  <rect class="caixa" x="960" y="370" width="160" height="80" rx="8"/>
+  <text class="titulo" x="1040" y="403" text-anchor="middle">mysql</text>
+  <text class="sub" x="1040" y="423" text-anchor="middle">MySQL 8.0</text>
+  <path class="linha" d="M750,410 L773,410"/>
+  <path class="linha" d="M935,410 L958,410"/>
+
+  <text class="sub" x="590" y="500">O nginx de cada versão serve o React e repassa /api para a API.</text>
+  <text class="sub" x="590" y="520">A API cria as tabelas ao subir (migrations) e grava no MySQL.</text>
+
+  <path class="linha" d="M210,205 L298,205"/>
+  <text class="rotulo" x="222" y="195">HTTP</text>
+  <path class="linha" d="M520,215 C545,215 545,265 588,265"/>
+  <path class="linha" d="M520,235 C545,235 545,410 588,410"/>
+
+  <path class="deploy" d="M210,520 C420,520 420,600 568,560"/>
+  <text class="rotulo" x="300" y="590" fill="#8a5cf6">git clone + docker compose up</text>
+</svg>

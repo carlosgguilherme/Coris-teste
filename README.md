@@ -2,6 +2,11 @@
 
 Seguro Viagem é uma aplicação web para **gestão de apólices de seguro viagem**, desenvolvida como teste técnico, utilizando **Laravel 12**, **React 18** e **MySQL**, com desenho de solução na **Azure**. O foco foi entregar o CRUD completo com regras reais do negócio de seguros (cálculo do prêmio, vigência, exclusão lógica), código organizado seguindo **SOLID** e **Clean Code** e testes automatizados.
 
+## Demonstração na Azure
+
+- **Versão principal (Laravel):** http://172.172.89.245
+- **Versão .NET** ([coris-teste-dotnet](https://github.com/carlosgguilherme/coris-teste-dotnet)): http://172.172.89.245:8080
+
 ---
 
 ## Requisitos atendidos
@@ -11,7 +16,7 @@ Seguro Viagem é uma aplicação web para **gestão de apólices de seguro viage
 - Conceitos de **SOLID** e **Clean Code** (veja [onde cada um aparece](#onde-estão-o-solid-e-o-clean-code))
 - Frontend em **React 18**
 - Banco de dados relacional (**MySQL**) com relacionamentos **1:N** ([diagrama](#modelagem-do-domínio))
-- Desenho de solução com componentes da **Azure** (publicação pendente)
+- Desenho de solução com componentes da **Azure** e aplicação publicada numa **VM da Azure**
 - Testes automatizados (PHPUnit)
 - Docker para desenvolvimento local
 
@@ -37,6 +42,12 @@ Seguro Viagem é uma aplicação web para **gestão de apólices de seguro viage
 - **Azure Database for MySQL** guarda segurados e apólices
 - **Key Vault** guarda a senha do banco e a `APP_KEY`, lidas pelo App Service com **Managed Identity**
 - **GitHub Actions** faz o deploy a cada push (workflow `.github/workflows/azure-api.yml`)
+
+### Publicação atual
+
+![Publicação atual na Azure](docs/arquitetura-azure-vm.svg)
+
+A demonstração está numa **Máquina Virtual Linux da Azure** rodando o mesmo `docker compose` do desenvolvimento, com as duas versões (Laravel na porta 80 e .NET na 8080). O IP público e o grupo de segurança de rede (NSG) liberam só as portas usadas. A arquitetura acima, com serviços gerenciados, continua sendo a proposta para produção; a VM foi usada porque a assinatura de avaliação bloqueou o App Service por cota.
 
 ---
 
@@ -286,7 +297,17 @@ Feito pelo Portal da Azure, no Resource Group `rg-coris-seguros` (Brazil South).
    - Conectar o GitHub, app location `frontend`, output `dist`
    - Variável de build `VITE_API_URL` com a URL do App Service + `/api`
 
-**Situação atual:** o deploy está preparado (scripts, workflow e passos acima), mas não foi concluído. Na assinatura de avaliação gratuita usada, a Azure bloqueou a criação por cota: App Service (planos B1 e F1) com limite 0, tamanhos de VM indisponíveis e falha no provisionamento do MySQL. Com uma assinatura sem essas restrições, basta seguir os passos acima. Até lá, o projeto roda completo com `docker compose up -d --build`.
+**Situação atual:** na assinatura de avaliação usada, a Azure bloqueou o App Service por cota (planos B1 e F1 com limite 0) e o provisionamento do MySQL gerenciado falhou. Por isso a demonstração foi publicada numa VM, como descrito em [Publicação atual](#publicação-atual). Os passos acima valem para uma assinatura sem essas restrições.
+
+Na VM (Ubuntu), a publicação foi feita assim:
+
+```bash
+curl -fsSL https://get.docker.com | sudo sh
+git clone https://github.com/carlosgguilherme/Coris-teste.git && cd Coris-teste
+sed -i 's/"3000:80"/"80:80"/' docker-compose.yml
+sudo docker compose up -d --build
+sudo docker compose exec api php artisan db:seed --force
+```
 
 ---
 

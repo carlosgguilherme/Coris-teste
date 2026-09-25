@@ -632,13 +632,25 @@ código. A publicação é feita pelo GitHub Actions a cada atualização do rep
   \fonte{elaborado pelo autor (2026).}
 \end{figure}
 
-Os arquivos de publicação estão prontos no repositório: o script de inicialização e a
+Os arquivos para esse modelo estão prontos no repositório: o script de inicialização e a
 configuração do nginx para o App Service e um \emph{workflow} do GitHub Actions que publica a API
-a cada alteração na \emph{branch} principal. A publicação foi tentada, mas a assinatura de
-avaliação gratuita da Azure bloqueou a criação dos recursos por falta de cota (limite zero para os
-planos B1 e F1 do App Service, tamanhos de máquina virtual indisponíveis e falha no provisionamento
-do MySQL). Com uma assinatura sem essas restrições, basta seguir os passos documentados. Até lá,
-a aplicação completa é executada localmente com Docker.
+a cada alteração na \emph{branch} principal. Na assinatura de avaliação usada, porém, a Azure
+bloqueou o App Service por falta de cota e o provisionamento do MySQL gerenciado falhou.
+
+Por isso, a demonstração foi publicada numa \textbf{máquina virtual Linux da Azure}, que executa
+o mesmo Docker Compose usado no desenvolvimento (Figura~\ref{fig:azure-vm}). Na mesma máquina
+rodam as duas versões do projeto: a principal, em Laravel, em \url{http://172.172.89.245}, e a
+versão em .NET, em \url{http://172.172.89.245:8080}. O IP público e o grupo de segurança de rede
+liberam apenas as portas usadas. A diferença entre os dois desenhos é o modelo de serviço: na
+máquina virtual (IaaS) o servidor é administrado pelo desenvolvedor, enquanto no desenho proposto
+(PaaS) a Azure cuida do servidor, da escala e das cópias de segurança.
+
+\begin{figure}[H]
+  \centering
+  \caption{Publicação atual na Microsoft Azure}\label{fig:azure-vm}
+  \includegraphics[width=\textwidth]{imagens/arquitetura-azure-vm.png}
+  \fonte{elaborado pelo autor (2026).}
+\end{figure}
 
 % =====================================================================
 \section{Considerações finais}\label{sec:conclusao}
@@ -653,7 +665,7 @@ Como diferencial, a \emph{dashboard} oferece a cada time as informações de que
 marketing avalia a conversão e o retorno das campanhas, o comercial acompanha as vendas em
 valores e a diretoria tem uma visão consolidada do negócio.
 
-Como trabalhos futuros, destacam-se a publicação dos recursos na Azure, a autenticação de
+Como trabalhos futuros, destacam-se a migração da publicação para os serviços gerenciados da Azure, a autenticação de
 usuários com perfis de acesso por time, o registro do histórico de alterações de cada apólice
 (endosso), testes automatizados no \emph{frontend} e, com o crescimento do volume de dados, o
 uso de indicadores pré-calculados para acelerar a \emph{dashboard}.

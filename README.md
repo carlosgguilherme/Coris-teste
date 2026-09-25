@@ -336,7 +336,14 @@ pdflatex documentacao.tex
 
 ## Uso de IA
 
-Ferramentas de inteligência artificial foram usadas como apoio na criação dos dados de demonstração (seeders) e na organização das regras de negócio de seguro viagem.
+Usei um assistente de IA como apoio durante todo o desenvolvimento, principalmente para:
+
+- **Regras de negócio:** pesquisar e organizar como funciona um seguro viagem (cálculo do prêmio por plano, destino, dias e idade; vigência; sinistralidade e prêmio ganho nos indicadores)
+- **Dados de demonstração:** gerar os seeders com 24 meses de histórico para a dashboard
+- **Código:** sugestões de implementação, revisão e testes, e a conversão da versão Laravel para .NET
+- **Documentação e publicação:** README, relatório em LaTeX, diagramas e o passo a passo do deploy na Azure
+
+As decisões do projeto, a revisão e os testes do que foi gerado são de minha responsabilidade.
 
 ---
 

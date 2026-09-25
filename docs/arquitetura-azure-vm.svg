@@ -23,7 +23,7 @@
   <text x="40" y="46" font-size="22" font-weight="700" fill="#1b2533">Coris Seguros · Gestão de Apólices — publicação atual na Azure (VM)</text>
 
   <rect x="260" y="80" width="910" height="530" rx="14" fill="#f5f9fd" stroke="#0078d4" stroke-width="1.5" stroke-dasharray="8 6"/>
-  <text x="280" y="110" font-size="13" font-weight="700" fill="#0078d4">AZURE · Resource Group rg-coris-seguros-vm_group · East US 2</text>
+  <text x="280" y="110" font-size="13" font-weight="700" fill="#0078d4">AZURE · rg-coris-seguros-vm_group · East US 2 · coris-seguros-carlos.eastus2.cloudapp.azure.com</text>
 
   <rect class="externo" x="40" y="160" width="170" height="90" rx="10"/>
   <text class="titulo" x="125" y="198" text-anchor="middle">Usuário</text>
@@ -38,15 +38,15 @@
   <rect class="faixa" x="300" y="140" width="6" height="150" rx="3"/>
   <text class="titulo" x="320" y="172">IP público + NSG</text>
   <text class="sub" x="320" y="196">Grupo de segurança de rede</text>
-  <text class="sub" x="320" y="218">Porta 80 · Laravel</text>
-  <text class="sub" x="320" y="238">Porta 8080 · .NET</text>
-  <text class="sub" x="320" y="258">Porta 22 · SSH</text>
+  <text class="sub" x="320" y="218">Porta 443 · Laravel (HTTPS)</text>
+  <text class="sub" x="320" y="238">Porta 8443 · .NET (HTTPS)</text>
+  <text class="sub" x="320" y="258">Porta 80 → HTTPS · 22 SSH</text>
 
   <rect x="570" y="130" width="570" height="460" rx="12" fill="#ffffff" stroke="#0078d4" stroke-width="1.5"/>
   <text class="titulo" x="590" y="160">Máquina Virtual Linux (Ubuntu 24.04)</text>
   <text class="sub" x="590" y="180">Docker + Docker Compose · disco gerenciado guarda os dados do MySQL</text>
 
-  <text class="rotulo" x="590" y="215">Versão principal (Laravel) · porta 80</text>
+  <text class="rotulo" x="590" y="215">Versão principal (Laravel) · https porta 443</text>
   <rect class="caixa" x="590" y="225" width="160" height="80" rx="8"/>
   <text class="titulo" x="670" y="258" text-anchor="middle">web</text>
   <text class="sub" x="670" y="278" text-anchor="middle">nginx + React 18</text>
@@ -59,7 +59,7 @@
   <path class="linha" d="M750,265 L773,265"/>
   <path class="linha" d="M935,265 L958,265"/>
 
-  <text class="rotulo" x="590" y="360">Versão .NET · porta 8080</text>
+  <text class="rotulo" x="590" y="360">Versão .NET · https porta 8443</text>
   <rect class="caixa" x="590" y="370" width="160" height="80" rx="8"/>
   <text class="titulo" x="670" y="403" text-anchor="middle">web</text>
   <text class="sub" x="670" y="423" text-anchor="middle">nginx + React 18</text>
@@ -72,11 +72,11 @@
   <path class="linha" d="M750,410 L773,410"/>
   <path class="linha" d="M935,410 L958,410"/>
 
-  <text class="sub" x="590" y="500">O nginx de cada versão serve o React e repassa /api para a API.</text>
-  <text class="sub" x="590" y="520">A API cria as tabelas ao subir (migrations) e grava no MySQL.</text>
+  <text class="sub" x="590" y="500">O Caddy recebe o HTTPS (certificado gratuito Let&#39;s Encrypt) e repassa para o web.</text>
+  <text class="sub" x="590" y="520">O nginx serve o React e repassa /api para a API, que grava no MySQL.</text>
 
   <path class="linha" d="M210,205 L298,205"/>
-  <text class="rotulo" x="222" y="195">HTTP</text>
+  <text class="rotulo" x="222" y="195">HTTPS</text>
   <path class="linha" d="M520,215 C545,215 545,265 588,265"/>
   <path class="linha" d="M520,235 C545,235 545,410 588,410"/>
 

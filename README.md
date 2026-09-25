@@ -4,8 +4,8 @@ Seguro Viagem é uma aplicação web para **gestão de apólices de seguro viage
 
 ## Demonstração na Azure
 
-- **Versão principal (Laravel):** http://172.172.89.245
-- **Versão .NET** ([coris-teste-dotnet](https://github.com/carlosgguilherme/coris-teste-dotnet)): http://172.172.89.245:8080
+- **Versão principal (Laravel):** https://coris-seguros-carlos.eastus2.cloudapp.azure.com
+- **Versão .NET** ([coris-teste-dotnet](https://github.com/carlosgguilherme/coris-teste-dotnet)): https://coris-seguros-carlos.eastus2.cloudapp.azure.com:8443
 
 ---
 
@@ -47,7 +47,7 @@ Seguro Viagem é uma aplicação web para **gestão de apólices de seguro viage
 
 ![Publicação atual na Azure](docs/arquitetura-azure-vm.svg)
 
-A demonstração está numa **Máquina Virtual Linux da Azure** rodando o mesmo `docker compose` do desenvolvimento, com as duas versões (Laravel na porta 80 e .NET na 8080). O IP público e o grupo de segurança de rede (NSG) liberam só as portas usadas. A arquitetura acima, com serviços gerenciados, continua sendo a proposta para produção; a VM foi usada porque a assinatura de avaliação bloqueou o App Service por cota.
+A demonstração está numa **Máquina Virtual Linux da Azure** rodando o mesmo `docker compose` do desenvolvimento, com as duas versões (Laravel na porta 443 e .NET na 8443). Na frente delas, o **Caddy** cuida do HTTPS com certificado gratuito do Let's Encrypt, usando o nome DNS do IP público da Azure. O grupo de segurança de rede (NSG) libera só as portas usadas. A arquitetura acima, com serviços gerenciados, continua sendo a proposta para produção; a VM foi usada porque a assinatura de avaliação bloqueou o App Service por cota.
 
 ---
 
@@ -304,9 +304,19 @@ Na VM (Ubuntu), a publicação foi feita assim:
 ```bash
 curl -fsSL https://get.docker.com | sudo sh
 git clone https://github.com/carlosgguilherme/Coris-teste.git && cd Coris-teste
-sed -i 's/"3000:80"/"80:80"/' docker-compose.yml
 sudo docker compose up -d --build
 sudo docker compose exec api php artisan db:seed --force
+```
+
+O HTTPS fica com o Caddy, rodando em container na mesma VM, com este `Caddyfile`:
+
+```
+coris-seguros-carlos.eastus2.cloudapp.azure.com {
+    reverse_proxy localhost:3000
+}
+coris-seguros-carlos.eastus2.cloudapp.azure.com:8443 {
+    reverse_proxy localhost:8080
+}
 ```
 
 ---

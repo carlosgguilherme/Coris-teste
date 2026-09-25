@@ -639,9 +639,10 @@ bloqueou o App Service por falta de cota e o provisionamento do MySQL gerenciado
 
 Por isso, a demonstração foi publicada numa \textbf{máquina virtual Linux da Azure}, que executa
 o mesmo Docker Compose usado no desenvolvimento (Figura~\ref{fig:azure-vm}). Na mesma máquina
-rodam as duas versões do projeto: a principal, em Laravel, em \url{http://172.172.89.245}, e a
-versão em .NET, em \url{http://172.172.89.245:8080}. O IP público e o grupo de segurança de rede
-liberam apenas as portas usadas. A diferença entre os dois desenhos é o modelo de serviço: na
+rodam as duas versões do projeto: a principal, em Laravel, em
+\url{https://coris-seguros-carlos.eastus2.cloudapp.azure.com}, e a versão em .NET, na porta 8443 do mesmo endereço. Na frente
+delas, o servidor Caddy cuida do HTTPS com um certificado gratuito do Let's Encrypt, e o grupo de
+segurança de rede libera apenas as portas usadas. A diferença entre os dois desenhos é o modelo de serviço: na
 máquina virtual (IaaS) o servidor é administrado pelo desenvolvedor, enquanto no desenho proposto
 (PaaS) a Azure cuida do servidor, da escala e das cópias de segurança.
 

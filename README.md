@@ -334,6 +334,12 @@ pdflatex documentacao.tex
 
 ---
 
+## Uso de IA
+
+Ferramentas de inteligência artificial foram usadas como apoio na criação dos dados de demonstração (seeders) e na organização das regras de negócio de seguro viagem.
+
+---
+
 ## Autor do projeto - teste tecnico para CORIS
 
 Carlos Guilherme Fontes Pereira

@@ -113,11 +113,9 @@ por meio de Docker, cujos indicadores respondem a perguntas reais de negócio.
 
 % ================================================================ listas e sumário
 \thispagestyle{empty}
-\renewcommand{\listfigurename}{LISTA DE FIGURAS}
 \renewcommand{\listtablename}{LISTA DE TABELAS}
 \renewcommand{\contentsname}{SUMÁRIO}
 \begin{singlespace}
-\listoffigures
 \listoftables
 \end{singlespace}
 \newpage
@@ -267,21 +265,17 @@ No \emph{frontend}, cada tela fica em \arq{src/pages}, os componentes reutilizá
 diretamente: todas usam as funções desse módulo, que padronizam o envio dos dados e o tratamento
 de erros. A formatação de moeda, datas e CPF fica concentrada em \arq{src/utils/format.js}.
 
-As Figuras~\ref{fig:lista} e \ref{fig:cadastro} mostram as telas de listagem e de cadastro. No
+Abaixo estão as telas de listagem e de cadastro. No
 cadastro, o prêmio aparece à direita e é recalculado enquanto os campos são preenchidos.
 
 \begin{figure}[H]
   \centering
-  \caption{Tela de listagem de apólices}\label{fig:lista}
   \includegraphics[width=0.95\textwidth]{imagens/lista-apolices.png}
-  \fonte{elaborado pelo autor (2026).}
 \end{figure}
 
 \begin{figure}[H]
   \centering
-  \caption{Tela de cadastro de apólice, com o prêmio calculado em tempo real}\label{fig:cadastro}
   \includegraphics[width=0.95\textwidth]{imagens/cadastro-apolice.png}
-  \fonte{elaborado pelo autor (2026).}
 \end{figure}
 
 % =====================================================================
@@ -290,14 +284,12 @@ cadastro, o prêmio aparece à direita e é recalculado enquanto os campos são 
 O banco de dados possui oito tabelas. As tabelas \texttt{segurados} e \texttt{apolices} formam o
 cadastro principal. As outras seis armazenam as informações usadas pela \emph{dashboard}: os
 canais de venda, as campanhas de marketing, as cotações feitas pelos clientes e as etapas que
-eles percorreram, os sinistros e os atendimentos da central. A Figura~\ref{fig:der} apresenta o
-diagrama de entidade e relacionamento.
+eles percorreram, os sinistros e os atendimentos da central. Abaixo está o diagrama de
+entidade e relacionamento.
 
 \begin{figure}[H]
   \centering
-  \caption{Diagrama de entidade e relacionamento}\label{fig:der}
   \includegraphics[width=\textwidth]{../der.png}
-  \fonte{elaborado pelo autor (2026).}
 \end{figure}
 
 A Tabela~\ref{tab:tabelas} descreve o conteúdo de cada tabela.
@@ -474,14 +466,11 @@ filtradas pelos últimos 30 ou 90 dias ou pelos últimos 12 ou 24 meses.
 
 A visão geral é voltada à diretoria. Ela mostra seis indicadores (prêmio emitido, apólices,
 ticket médio, conversão, sinistralidade e NPS), cada um comparado com o período anterior de mesmo
-tamanho, e um gráfico do prêmio mês a mês comparado com o mesmo mês do ano anterior
-(Figura~\ref{fig:visao-geral}). O gráfico pode exibir 6 ou 12 meses, em linha ou em colunas.
+tamanho, e um gráfico do prêmio mês a mês comparado com o mesmo mês do ano anterior. O gráfico pode exibir 6 ou 12 meses, em linha ou em colunas.
 
 \begin{figure}[H]
   \centering
-  \caption{Visão geral da dashboard}\label{fig:visao-geral}
   \includegraphics[width=0.95\textwidth]{imagens/dashboard-visao-geral.png}
-  \fonte{elaborado pelo autor (2026).}
 \end{figure}
 
 \subsection{Marketing}
@@ -489,18 +478,16 @@ tamanho, e um gráfico do prêmio mês a mês comparado com o mesmo mês do ano 
 O time de marketing precisa saber se os clientes que chegam estão comprando e se o dinheiro
 investido em campanhas está voltando. Por isso, essa visão mostra a quantidade de cotações, a
 taxa de conversão, o valor investido, o prêmio gerado, o retorno sobre o investimento (ROI) e o
-custo para vender cada apólice (Figura~\ref{fig:marketing}). O funil de conversão mostra em que
+custo para vender cada apólice. O funil de conversão mostra em que
 etapa da cotação os clientes desistem, destacando a de maior abandono, e a conversão por canal
 revela, por exemplo, que as agências convertem proporcionalmente mais do que o site.
 
 \begin{figure}[H]
   \centering
-  \caption{Visão de marketing}\label{fig:marketing}
   \includegraphics[width=0.95\textwidth]{imagens/dashboard-marketing.png}
-  \fonte{elaborado pelo autor (2026).}
 \end{figure}
 
-Cada campanha pode ser analisada em detalhe (Figura~\ref{fig:campanha}): ao escolhê-la, são
+Cada campanha pode ser analisada em detalhe: ao escolhê-la, são
 exibidos o investimento, o prêmio gerado, o ROI, o custo por apólice e a conversão, além de um
 gráfico com as cotações e as apólices de cada semana em que ela esteve no ar. Uma tabela compara
 todas as campanhas do período, e um gráfico mostra com quantos dias de antecedência os clientes
@@ -508,9 +495,7 @@ compram o seguro, informação útil para decidir quando lançar uma campanha.
 
 \begin{figure}[H]
   \centering
-  \caption{Detalhe de uma campanha, semana a semana}\label{fig:campanha}
   \includegraphics[width=0.95\textwidth]{imagens/dashboard-campanha.png}
-  \fonte{elaborado pelo autor (2026).}
 \end{figure}
 
 \subsection{Comercial}
@@ -518,13 +503,11 @@ compram o seguro, informação útil para decidir quando lançar uma campanha.
 O time comercial acompanha as vendas em valores. Essa visão mostra o prêmio emitido, as apólices
 vendidas, o ticket médio e os cancelamentos, comparados ao período anterior; a participação de
 cada canal no total vendido; as vendas por destino; e a participação e o ticket médio de cada
-plano (Figura~\ref{fig:comercial}).
+plano.
 
 \begin{figure}[H]
   \centering
-  \caption{Visão comercial}\label{fig:comercial}
   \includegraphics[width=0.95\textwidth]{imagens/dashboard-comercial.png}
-  \fonte{elaborado pelo autor (2026).}
 \end{figure}
 
 \subsection{Sinistros e atendimento}
@@ -532,13 +515,11 @@ plano (Figura~\ref{fig:comercial}).
 A última visão acompanha o custo dos sinistros e a qualidade do atendimento: frequência e custo
 médio dos sinistros, sinistralidade por destino comparada a uma meta de 60\%, custo por tipo de
 cobertura, situação dos sinistros e, na central de atendimento, o NPS e o percentual de
-atendimentos dentro do prazo (Figura~\ref{fig:sinistros}).
+atendimentos dentro do prazo.
 
 \begin{figure}[H]
   \centering
-  \caption{Visão de sinistros e atendimento}\label{fig:sinistros}
   \includegraphics[width=0.95\textwidth]{imagens/dashboard-sinistros.png}
-  \fonte{elaborado pelo autor (2026).}
 \end{figure}
 
 \subsection{Fórmulas dos indicadores}
@@ -617,7 +598,7 @@ carrega os dados de demonstração. A aplicação fica disponível em \texttt{ht
 
 \subsection{Implantação na Microsoft Azure}
 
-A Figura~\ref{fig:azure} apresenta o desenho da solução na Azure. O \emph{frontend} React é
+O desenho da solução na Azure está na imagem abaixo. O \emph{frontend} React é
 publicado no \textbf{Azure Static Web Apps}, que o distribui por uma rede de entrega de conteúdo
 com HTTPS. A API Laravel é executada no \textbf{Azure App Service}, que permite escalar a
 aplicação conforme a demanda. Os dados ficam no \textbf{Azure Database for MySQL}, um banco
@@ -627,9 +608,7 @@ código. A publicação é feita pelo GitHub Actions a cada atualização do rep
 
 \begin{figure}[H]
   \centering
-  \caption{Desenho da solução na Microsoft Azure}\label{fig:azure}
   \includegraphics[width=\textwidth]{imagens/arquitetura-azure.png}
-  \fonte{elaborado pelo autor (2026).}
 \end{figure}
 
 Os arquivos para esse modelo estão prontos no repositório: o script de inicialização e a
@@ -638,7 +617,7 @@ a cada alteração na \emph{branch} principal. Na assinatura de avaliação usad
 bloqueou o App Service por falta de cota e o provisionamento do MySQL gerenciado falhou.
 
 Por isso, a demonstração foi publicada numa \textbf{máquina virtual Linux da Azure}, que executa
-o mesmo Docker Compose usado no desenvolvimento (Figura~\ref{fig:azure-vm}). Na mesma máquina
+o mesmo Docker Compose usado no desenvolvimento. Na mesma máquina
 rodam as duas versões do projeto: a principal, em Laravel, em
 \url{https://coris-seguros-carlos.eastus2.cloudapp.azure.com}, e a versão em .NET, na porta 8443 do mesmo endereço. Na frente
 delas, o servidor Caddy cuida do HTTPS com um certificado gratuito do Let's Encrypt, e o grupo de
@@ -648,9 +627,7 @@ máquina virtual (IaaS) o servidor é administrado pelo desenvolvedor, enquanto 
 
 \begin{figure}[H]
   \centering
-  \caption{Publicação atual na Microsoft Azure}\label{fig:azure-vm}
   \includegraphics[width=\textwidth]{imagens/arquitetura-azure-vm.png}
-  \fonte{elaborado pelo autor (2026).}
 \end{figure}
 
 % =====================================================================
